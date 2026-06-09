@@ -27,15 +27,28 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     return user
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post(
+    "/login", 
+    response_model=LoginResponse, 
+    status_code=status.HTTP_200_OK,
+    summary="Autenticar usuario",
+    description="Verifica las credenciales del usuario, genera tokens JWT y los almacena en cookies seguras."
+)
 async def login(
     request: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
-):
-    access_token, refresh_token, user = await auth_service.login(db, request.email, request.password)
+) -> LoginResponse:
+    access_token, refresh_token, user = await auth_service.login(
+        db, email=request.email, password=request.password
+    )
+    
     set_auth_cookies(response, access_token, refresh_token)
-    return LoginResponse(authenticated=True, user=user)  # type: ignore[arg-type]
+    
+    return LoginResponse.model_validate({
+        "authenticated": True, 
+        "user": user
+    })
 
 
 @router.post("/refresh", response_model=dict)
