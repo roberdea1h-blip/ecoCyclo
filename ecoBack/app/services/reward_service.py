@@ -34,6 +34,13 @@ class RewardService:
     async def get_active_rewards(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> list[Reward]:
         return await reward_repository.get_active(db, skip=skip, limit=limit)
 
+    async def update_image(self, db: AsyncSession, reward_id: UUID, image_url: str) -> Reward:
+        reward = await reward_repository.get(db, reward_id)
+        if reward is None:
+            raise RewardNotFoundException()
+        reward = await reward_repository.update(db, reward, image_url=image_url)
+        return reward
+
     async def redeem_reward(self, db: AsyncSession, user_id: UUID, reward_id: UUID) -> bool:
         """Placeholder for reward redemption logic."""
         reward = await reward_repository.get(db, reward_id)

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Query, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_admin_user
@@ -11,6 +13,7 @@ from app.schemas.user import UserResponse
 from app.services.report_service import report_service
 from app.services.reward_service import reward_service
 from app.services.user_service import user_service
+from app.storage import get_image_storage, ImageStorage
 
 router = APIRouter()
 
@@ -50,6 +53,19 @@ async def create_reward(
     current_user: User = Depends(get_current_admin_user),
 ):
     reward = await reward_service.create_reward(db, data)
+    return reward
+
+
+@router.post("/rewards/{reward_id}/image", response_model=RewardResponse)
+async def upload_reward_image(
+    reward_id: UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+    storage: ImageStorage = Depends(get_image_storage),
+):
+    image_url = await storage.save(file, subfolder="rewards")
+    reward = await reward_service.update_image(db, reward_id, image_url)
     return reward
 
 
