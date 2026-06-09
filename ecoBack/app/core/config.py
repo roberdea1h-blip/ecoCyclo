@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     PROJECT_NAME: str = "EcoCycle"
     API_V1_PREFIX: str = "/api/v1"
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     AUTH_COOKIE_SECURE: bool = False
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024
