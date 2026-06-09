@@ -24,18 +24,14 @@ def _haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> f
 
 
 class ReportService:
-    async def create_report(self, db: AsyncSession, user_id: UUID, data: ReportCreate) -> Report:
-        report = await report_repository.create(
-            db,
-            user_id=user_id,
-            waste_type_id=data.waste_type_id,
-            title=data.title,
-            description=data.description,
-            latitude=data.latitude,
-            longitude=data.longitude,
-            address=data.address,
-        )
-        return report
+     async def create_report(
+        self, db: AsyncSession, user_id: UUID, data: ReportCreate
+    ) -> Report:
+        report_data = data.model_dump()
+        report_data["user_id"] = user_id
+
+        
+        return await report_repository.create(db, **report_data) # Desempaquetamos el diccionario directamente en el repositorio
 
     async def get_report(self, db: AsyncSession, report_id: UUID) -> Report:
         report = await report_repository.get_with_images(db, report_id)
