@@ -82,12 +82,6 @@ export interface WasteType {
   icon: string
 }
 
-export interface AuthTokens {
-  access_token: string
-  refresh_token: string
-  token_type: string
-}
-
 export interface PaginatedResponse<T> {
   items: T[]
   total: number

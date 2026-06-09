@@ -1,17 +1,17 @@
 import { api } from './http'
-import type { AuthTokens, User } from '../types'
+import type { User } from '../types'
 
 export const authApi = {
   register(data: { email: string; password: string; full_name: string }) {
-    return api.post<AuthTokens>('/auth/register', data)
+    return api.post<User>('/auth/register', data)
   },
 
   login(data: { email: string; password: string }) {
-    return api.post<AuthTokens>('/auth/login', data)
+    return api.post<{ authenticated: boolean; user: User }>('/auth/login', data)
   },
 
   refresh() {
-    return api.post<AuthTokens>('/auth/refresh')
+    return api.post<{ authenticated: boolean }>('/auth/refresh')
   },
 
   logout() {

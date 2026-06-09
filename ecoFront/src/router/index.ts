@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -70,33 +71,24 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('access_token')
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
 
-  if (to.meta.requiresAuth && !token) {
-    next({ name: 'Login' })
-    return
+  if (!authStore._initialized) {
+    await authStore.initialize()
   }
 
-  if (to.meta.guest && token) {
-    next({ name: 'Dashboard' })
-    return
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return { name: 'Login' }
   }
 
-  if (to.meta.role === 'admin') {
-    // Defer to the store check: we import async to avoid circular deps
-    import('../stores/authStore').then(({ useAuthStore }) => {
-      const authStore = useAuthStore()
-      if (!authStore.isAdmin) {
-        next({ name: 'Dashboard' })
-      } else {
-        next()
-      }
-    })
-    return
+  if (to.meta.guest && authStore.isAuthenticated) {
+    return { name: 'Dashboard' }
   }
 
-  next()
+  if (to.meta.role === 'admin' && !authStore.isAdmin) {
+    return { name: 'Dashboard' }
+  }
 })
 
 export default router
