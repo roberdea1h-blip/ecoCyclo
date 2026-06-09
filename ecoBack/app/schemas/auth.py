@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
+
+from app.schemas.user import UserResponse
 
 
 class LoginRequest(BaseModel):
@@ -21,3 +23,8 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class LoginResponse(BaseModel):
+    authenticated: bool
+    user: UserResponse

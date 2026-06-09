@@ -1,9 +1,11 @@
+import hashlib
 from datetime import datetime, timedelta
 from typing import Any
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from jose import JWTError, jwt
+from starlette.responses import Response
 
 from app.core.config import get_settings
 
@@ -42,3 +44,53 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return payload
     except JWTError:
         return None
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite="strict",
+        path=f"{settings.API_V1_PREFIX}/auth",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+    )
+
+
+def clear_auth_cookies(response: Response) -> None:
+    response.set_cookie(
+        key="access_token",
+        value="",
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+        max_age=0,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value="",
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite="strict",
+        path=f"{settings.API_V1_PREFIX}/auth",
+        max_age=0,
+    )

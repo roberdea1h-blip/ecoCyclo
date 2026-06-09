@@ -10,6 +10,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     hash_password,
+    hash_refresh_token,
     verify_password,
 )
 from app.models.refresh_token import RefreshToken
@@ -65,23 +66,24 @@ class AuthService:
 
         return access_token, refresh_token_str, user
 
-    async def refresh(self, db: AsyncSession, refresh_token_str: str) -> tuple[str, str]:
-        payload = decode_token(refresh_token_str)
-        if payload is None or payload.get("type") != "refresh":
-            raise InvalidToken()
-
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise InvalidToken()
-
+    async def refresh(self, db: AsyncSession, raw_refresh_token: str) -> tuple[str, str]:
+        token_hash = hash_refresh_token(raw_refresh_token)
         result = await db.execute(
             select(RefreshToken).where(
-                RefreshToken.token == refresh_token_str,
+                RefreshToken.token_hash == token_hash,
                 RefreshToken.is_revoked.is_(False),
             )
         )
         stored_token = result.scalar_one_or_none()
         if stored_token is None:
+            raise InvalidToken()
+
+        payload = decode_token(raw_refresh_token)
+        if payload is None or payload.get("type") != "refresh":
+            raise InvalidToken()
+
+        user_id = payload.get("sub")
+        if user_id is None:
             raise InvalidToken()
 
         stored_token.is_revoked = True
@@ -95,9 +97,12 @@ class AuthService:
 
         return new_access, new_refresh
 
-    async def logout(self, db: AsyncSession, refresh_token_str: str) -> None:
+    async def logout(self, db: AsyncSession, raw_refresh_token: str | None) -> None:
+        if raw_refresh_token is None:
+            return
+        token_hash = hash_refresh_token(raw_refresh_token)
         result = await db.execute(
-            select(RefreshToken).where(RefreshToken.token == refresh_token_str)
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
         )
         stored_token = result.scalar_one_or_none()
         if stored_token:
@@ -110,7 +115,7 @@ class AuthService:
         refresh_token = RefreshToken(
             id=uuid.uuid4(),
             user_id=user_id,
-            token=token,
+            token_hash=hash_refresh_token(token),
             expires_at=expires_at,
         )
         db.add(refresh_token)
