@@ -1,0 +1,37 @@
+# Framework principal
+fastapi==0.115.11
+uvicorn[standard]==0.34.0
+
+# Base de datos SQL Server
+pyodbc==5.2.0
+sqlalchemy==2.0.36
+python-dotenv==1.0.1
+
+# Autenticación y seguridad
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.0
+python-multipart==0.0.20
+
+# Validación y utilidades
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# Manejo de fechas
+python-dateutil==2.9.0
+
+# Para conexión con mapas (geolocalización)
+geopy==2.4.1
+
+# Para enviar correos
+fastapi-mail==1.4.1
+
+# Para manejo de archivos/imágenes
+Pillow==11.0.0
+aiofiles==24.1.0
+
+# Para CORS y middlewares
+fastapi-middleware==0.2.0
+
+# Para logging y monitoreo
+loguru==0.7.3
