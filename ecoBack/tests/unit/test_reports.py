@@ -69,7 +69,7 @@ class TestReportsCreate:
 
 class TestReportsList:
     async def test_list_reports_returns_list(self, client, auth_headers, mock_report):
-        with patch.object(report_service, "get_all_reports", new=AsyncMock(return_value=[mock_report])):
+        with patch.object(report_service, "get_filtered_reports", new=AsyncMock(return_value=[mock_report])):
             response = await client.get("/api/v1/reports/", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
@@ -79,14 +79,14 @@ class TestReportsList:
         assert data[0]["title"] == mock_report.title
 
     async def test_list_reports_empty_returns_empty_list(self, client, auth_headers):
-        with patch.object(report_service, "get_all_reports", new=AsyncMock(return_value=[])):
+        with patch.object(report_service, "get_filtered_reports", new=AsyncMock(return_value=[])):
             response = await client.get("/api/v1/reports/", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == []
 
     async def test_list_reports_pagination_params(self, client, auth_headers, mock_report):
-        with patch.object(report_service, "get_all_reports", new=AsyncMock(return_value=[mock_report])):
+        with patch.object(report_service, "get_filtered_reports", new=AsyncMock(return_value=[mock_report])):
             response = await client.get("/api/v1/reports/?skip=0&limit=10", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK

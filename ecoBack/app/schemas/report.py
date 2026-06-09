@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +37,16 @@ class ReportResponse(BaseModel):
     cleaned_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class ReportFilters(BaseModel):
+    status: ReportStatus | None = None
+    waste_type_id: UUID | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+    lat: float | None = Field(None, ge=-90, le=90)
+    lng: float | None = Field(None, ge=-180, le=180)
+    radius_km: float | None = Field(None, ge=0.1, le=1000)
 
 
 class ReportImageResponse(BaseModel):

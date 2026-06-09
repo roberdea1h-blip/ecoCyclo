@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as SAEnum, Float, ForeignKey, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, Enum as SAEnum, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,14 @@ class ReportStatus(str, enum.Enum):
 
 class Report(Base):
     __tablename__ = "reports"
+
+    __table_args__ = (
+        CheckConstraint("latitude >= -90 AND latitude <= 90", name="ck_report_latitude_range"),
+        CheckConstraint("longitude >= -180 AND longitude <= 180", name="ck_report_longitude_range"),
+        Index("ix_report_lat_lng", "latitude", "longitude"),
+        Index("ix_report_status", "status"),
+        Index("ix_report_created_at", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

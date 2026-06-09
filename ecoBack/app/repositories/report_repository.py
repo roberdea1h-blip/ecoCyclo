@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import select
@@ -41,6 +42,54 @@ class ReportRepository(BaseRepository[Report]):
         result = await db.execute(
             select(Report).where(Report.status == status)
         )
+        return len(result.scalars().all())
+
+    async def get_filtered(
+        self,
+        db: AsyncSession,
+        status: ReportStatus | None = None,
+        waste_type_id: UUID | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Report]:
+        stmt = select(Report)
+
+        if status is not None:
+            stmt = stmt.where(Report.status == status)
+        if waste_type_id is not None:
+            stmt = stmt.where(Report.waste_type_id == waste_type_id)
+        if date_from is not None:
+            stmt = stmt.where(Report.created_at >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(Report.created_at <= date_to)
+
+        stmt = stmt.offset(skip).limit(limit).order_by(Report.created_at.desc())
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_filtered(
+        self,
+        db: AsyncSession,
+        status: ReportStatus | None = None,
+        waste_type_id: UUID | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> int:
+        stmt = select(Report)
+
+        if status is not None:
+            stmt = stmt.where(Report.status == status)
+        if waste_type_id is not None:
+            stmt = stmt.where(Report.waste_type_id == waste_type_id)
+        if date_from is not None:
+            stmt = stmt.where(Report.created_at >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(Report.created_at <= date_to)
+
+        result = await db.execute(stmt)
         return len(result.scalars().all())
 
 
