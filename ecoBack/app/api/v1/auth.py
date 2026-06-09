@@ -21,10 +21,20 @@ async def health_check():
     return {"status": "ok", "service": "auth"}
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@router.post(
+    "/register", 
+    response_model=UserResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar un nuevo usuario",
+    description="Crea una nueva cuenta de usuario en el sistema. Valida que el email y el username no estén duplicados y asigna el rol por defecto."
+)
+async def register(
+    request: RegisterRequest, 
+    db: AsyncSession = Depends(get_db)
+) -> UserResponse:
     user = await auth_service.register(db, request)
-    return user
+    
+    return UserResponse.model_validate(user)
 
 
 @router.post(
