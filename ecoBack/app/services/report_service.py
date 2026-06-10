@@ -15,13 +15,16 @@ from app.schemas.notification import NotificationCreate
 from app.schemas.report import ReportCreate, ReportUpdate
 from app.services.action_log_service import action_log_service
 from app.services.notification_service import notification_service
+from app.models.user import User
 from app.utils.exceptions import (
     CannotClaimOwnReportException,
     ForbiddenException,
     NotAssignedCleanerException,
+    NotOriginalReporterException,
     ReportNotFoundException,
     ReportNotInProgressException,
     ReportNotPendingException,
+    ReportNotPendingReviewException,
 )
 
 
@@ -118,19 +121,19 @@ class ReportService:
         return reports
 
     async def update_report(
-        self, db: AsyncSession, report_id: UUID, user_id: UUID, data: ReportUpdate
+        self, db: AsyncSession, report_id: UUID, current_user: User, data: ReportUpdate
     ) -> Report:
         report = await report_repository.get(db, report_id)
         if report is None:
             raise ReportNotFoundException()
-        if report.user_id != user_id:
+        if report.user_id != current_user.id and current_user.role_name != "admin":
             raise ForbiddenException()
 
         update_kwargs = data.model_dump(exclude_unset=True)
         if update_kwargs:
             report = await report_repository.update(db, report, **update_kwargs)
             await action_log_service.log(
-                db, user_id=user_id, action="report.update",
+                db, user_id=current_user.id, action="report.update",
                 entity_type="report", entity_id=str(report_id),
                 description=f"Reporte actualizado",
             )
@@ -138,11 +141,11 @@ class ReportService:
         report = await self._load_relations(db, report)
         return report
 
-    async def delete_report(self, db: AsyncSession, report_id: UUID, user_id: UUID) -> None:
+    async def delete_report(self, db: AsyncSession, report_id: UUID, current_user: User) -> None:
         report = await report_repository.get(db, report_id)
         if report is None:
             raise ReportNotFoundException()
-        if report.user_id != user_id:
+        if report.user_id != current_user.id and current_user.role_name != "admin":
             raise ForbiddenException()
         await report_repository.delete(db, report_id)
 
@@ -193,7 +196,7 @@ class ReportService:
 
         now = datetime.now(timezone.utc)
         report = await report_repository.update(
-            db, report, status=ReportStatus.cleaned, cleaned_at=now,
+            db, report, status=ReportStatus.pending_review, cleaned_at=now,
         )
 
         from app.models.cleanup_record import CleanupRecord
@@ -204,17 +207,61 @@ class ReportService:
         db.add(cleanup)
         await db.flush()
 
+        await notification_service.create_notification(
+            db, report.user_id,
+            NotificationCreate(
+                title="Limpieza pendiente de revisión",
+                message=f"El reporte \"{report.title}\" ha sido marcado como limpio. Revisa y confirma la limpieza para liberar los puntos.",
+                type="pending_review",
+            ),
+        )
+        if report.cleaner_id:
+            await notification_service.create_notification(
+                db, report.cleaner_id,
+                NotificationCreate(
+                    title="Limpieza completada",
+                    message=f"Has completado la limpieza de: {report.title}. Esperando confirmación del creador.",
+                    type="cleanup_completed",
+                ),
+            )
+
+        await action_log_service.log(
+            db, user_id=user_id, action="report.complete",
+            entity_type="report", entity_id=str(report_id),
+            description=f"Reporte marcado como limpio (pendiente revisión): {report.title}, peso: {collected_weight}",
+        )
+
+        report = await self._load_relations(db, report)
+        return report
+
+    async def verify_report(
+        self, db: AsyncSession, report_id: UUID, current_user: User,
+    ) -> Report:
+        report = await report_repository.get_with_images(db, report_id)
+        if report is None:
+            raise ReportNotFoundException()
+        if report.user_id != current_user.id and current_user.role_name != "admin":
+            raise NotOriginalReporterException()
+        if report.status != ReportStatus.pending_review:
+            raise ReportNotPendingReviewException()
+
+        now = datetime.now(timezone.utc)
+        report = await report_repository.update(
+            db, report, status=ReportStatus.verified,
+            validated_at=now, validator_id=current_user.id,
+        )
+
         points = 0
         if report.waste_type and report.waste_type.points_per_report:
             points = report.waste_type.points_per_report
 
-        if points > 0:
-            cleaner = await user_repository.get(db, user_id)
+        if points > 0 and report.cleaner_id:
+            cleaner = await user_repository.get(db, report.cleaner_id)
             if cleaner:
                 cleaner.points += points
                 from app.models.point_transaction import PointTransaction, PointTransactionType
                 pt = PointTransaction(
-                    user_id=user_id, points=points, type=PointTransactionType.earned,
+                    user_id=report.cleaner_id, points=points, type=PointTransactionType.earned,
                     description=f"Puntos por limpiar reporte: {report.title}",
                     reference_id=str(report_id),
                 )
@@ -224,25 +271,60 @@ class ReportService:
         await notification_service.create_notification(
             db, report.user_id,
             NotificationCreate(
-                title="Limpieza completada",
-                message=f"Tu reporte ha sido limpiado: {report.title}. Recibiste {points} puntos.",
-                type="cleanup_completed",
+                title="Limpieza confirmada",
+                message=f"Has confirmado la limpieza de: {report.title}.",
+                type="cleanup_verified",
             ),
         )
         if report.cleaner_id:
             await notification_service.create_notification(
                 db, report.cleaner_id,
                 NotificationCreate(
-                    title="Limpieza completada",
-                    message=f"Has completado la limpieza de: {report.title}. Ganaste {points} puntos.",
-                    type="cleanup_completed",
+                    title="Limpieza confirmada",
+                    message=f"Tu limpieza de \"{report.title}\" ha sido confirmada. Ganaste {points} puntos.",
+                    type="cleanup_verified",
                 ),
             )
 
         await action_log_service.log(
-            db, user_id=user_id, action="report.complete",
+            db, user_id=current_user.id, action="report.verify",
             entity_type="report", entity_id=str(report_id),
-            description=f"Reporte completado: {report.title}, peso: {collected_weight}, puntos: {points}",
+            description=f"Reporte verificado: {report.title}, puntos: {points}",
+        )
+
+        report = await self._load_relations(db, report)
+        return report
+
+    async def reject_report(
+        self, db: AsyncSession, report_id: UUID, current_user: User,
+        reason: str | None = None,
+    ) -> Report:
+        report = await report_repository.get_with_images(db, report_id)
+        if report is None:
+            raise ReportNotFoundException()
+        if report.user_id != current_user.id and current_user.role_name != "admin":
+            raise NotOriginalReporterException()
+        if report.status != ReportStatus.pending_review:
+            raise ReportNotPendingReviewException()
+
+        report = await report_repository.update(
+            db, report, status=ReportStatus.rejected,
+            validated_at=datetime.now(timezone.utc), validator_id=current_user.id,
+        )
+
+        await notification_service.create_notification(
+            db, report.cleaner_id,
+            NotificationCreate(
+                title="Limpieza rechazada",
+                message=f"La limpieza de \"{report.title}\" ha sido rechazada.{' Motivo: ' + reason if reason else ''}",
+                type="cleanup_rejected",
+            ),
+        )
+
+        await action_log_service.log(
+            db, user_id=current_user.id, action="report.reject",
+            entity_type="report", entity_id=str(report_id),
+            description=f"Reporte rechazado: {report.title}, motivo: {reason}",
         )
 
         report = await self._load_relations(db, report)

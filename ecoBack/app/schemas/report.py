@@ -21,6 +21,7 @@ class ReportUpdate(BaseModel):
     description: str | None = None
     status: ReportStatus | None = None
     address: str | None = Field(None, max_length=500)
+    estimated_quantity: float | None = None
 
 
 class ReportResponse(BaseModel):
@@ -38,6 +39,8 @@ class ReportResponse(BaseModel):
     status: ReportStatus
     cleaner_id: UUID | None
     cleaned_at: datetime | None
+    validated_at: datetime | None = None
+    validator_id: UUID | None = None
     cleaner_name: str | None = None
     waste_type_name: str | None = None
     user_name: str | None = None
@@ -49,6 +52,14 @@ class ReportResponse(BaseModel):
 class CompleteReportRequest(BaseModel):
     collected_weight: float | None = None
     notes: str | None = None
+
+
+class VerifyReportRequest(BaseModel):
+    pass
+
+
+class RejectReportRequest(BaseModel):
+    reason: str | None = Field(None, max_length=500)
 
 
 class ReportFilters(BaseModel):

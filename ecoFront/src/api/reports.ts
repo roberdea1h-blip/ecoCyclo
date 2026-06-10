@@ -43,6 +43,22 @@ export const reportsApi = {
     return api.post<Report>(`/reports/${id}/complete`, data)
   },
 
+  verify(id: string) {
+    return api.post<Report>(`/reports/${id}/verify`)
+  },
+
+  reject(id: string, data?: { reason?: string }) {
+    return api.post<Report>(`/reports/${id}/reject`, data)
+  },
+
+  pendingReview(params?: { skip?: number; limit?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const qs = searchParams.toString()
+    return api.get<Report[]>(`/reports/pending-review${qs ? `?${qs}` : ''}`)
+  },
+
   update(id: string, data: ReportUpdate) {
     return api.patch<Report>(`/reports/${id}`, data)
   },

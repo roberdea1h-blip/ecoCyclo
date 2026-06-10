@@ -8,7 +8,7 @@ from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.report import ReportStatus
 from app.models.user import User
-from app.schemas.report import CompleteReportRequest, ReportCreate, ReportImageResponse, ReportResponse, ReportUpdate
+from app.schemas.report import CompleteReportRequest, RejectReportRequest, ReportCreate, ReportImageResponse, ReportResponse, ReportUpdate
 from app.services.report_service import report_service
 from app.storage import get_image_storage, ImageStorage
 
@@ -109,6 +109,40 @@ async def complete_report(
     return report
 
 
+@router.post("/{report_id}/verify", response_model=ReportResponse)
+async def verify_report(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = await report_service.verify_report(db, report_id, current_user)
+    return report
+
+
+@router.post("/{report_id}/reject", response_model=ReportResponse)
+async def reject_report(
+    report_id: UUID,
+    body: RejectReportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = await report_service.reject_report(db, report_id, current_user, reason=body.reason)
+    return report
+
+
+@router.get("/pending-review", response_model=list[ReportResponse])
+async def pending_review_reports(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reports = await report_service.get_filtered_reports(
+        db, status=ReportStatus.pending_review, skip=skip, limit=limit,
+    )
+    return [r for r in reports if r.user_id == current_user.id]
+
+
 @router.get("/{report_id}", response_model=ReportResponse)
 async def get_report(
     report_id: UUID,
@@ -126,7 +160,7 @@ async def update_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    report = await report_service.update_report(db, report_id, current_user.id, data)
+    report = await report_service.update_report(db, report_id, current_user, data)
     return report
 
 
@@ -136,4 +170,4 @@ async def delete_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await report_service.delete_report(db, report_id, current_user.id)
+    await report_service.delete_report(db, report_id, current_user)

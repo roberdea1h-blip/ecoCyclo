@@ -17,6 +17,8 @@ export const useReportStore = defineStore('report', () => {
   const pendingCount = computed(() => reports.value.filter(r => r.status === 'pending').length)
   const inProgressCount = computed(() => reports.value.filter(r => r.status === 'in_progress').length)
   const cleanedCount = computed(() => reports.value.filter(r => r.status === 'cleaned').length)
+  const pendingReviewCount = computed(() => reports.value.filter(r => r.status === 'pending_review').length)
+  const verifiedCount = computed(() => reports.value.filter(r => r.status === 'verified').length)
 
   async function fetchReports(params?: { page?: number }) {
     loading.value = true
@@ -62,6 +64,7 @@ export const useReportStore = defineStore('report', () => {
   async function fetchReport(id: string) {
     loading.value = true
     error.value = null
+    currentReport.value = null
     try {
       currentReport.value = await reportsApi.get(id)
     } catch (e: any) {
@@ -151,6 +154,40 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
+  async function verifyReport(id: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await reportsApi.verify(id)
+      const idx = reports.value.findIndex(r => r.id === id)
+      if (idx !== -1) reports.value[idx] = updated
+      if (currentReport.value?.id === id) currentReport.value = updated
+      return updated
+    } catch (e: any) {
+      error.value = e.message || 'Error al verificar reporte'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function rejectReport(id: string, reason?: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await reportsApi.reject(id, { reason })
+      const idx = reports.value.findIndex(r => r.id === id)
+      if (idx !== -1) reports.value[idx] = updated
+      if (currentReport.value?.id === id) currentReport.value = updated
+      return updated
+    } catch (e: any) {
+      error.value = e.message || 'Error al rechazar reporte'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   function setFilter(status?: string, wasteTypeId?: string) {
     filterStatus.value = status
     filterWasteType.value = wasteTypeId
@@ -170,6 +207,8 @@ export const useReportStore = defineStore('report', () => {
     pendingCount,
     inProgressCount,
     cleanedCount,
+    pendingReviewCount,
+    verifiedCount,
     fetchReports,
     fetchMyReports,
     fetchReport,

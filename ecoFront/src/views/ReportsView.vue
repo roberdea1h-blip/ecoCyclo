@@ -50,6 +50,9 @@ const statusOptions = [
   { value: '', label: 'Todos los estados' },
   { value: 'pending', label: 'Pendiente' },
   { value: 'in_progress', label: 'En progreso' },
+  { value: 'pending_review', label: 'Pendiente de revisión' },
+  { value: 'verified', label: 'Verificado' },
+  { value: 'rejected', label: 'Rechazado' },
   { value: 'cleaned', label: 'Limpiado' },
 ]
 
@@ -180,7 +183,7 @@ function nextPage() {
                   <h3 class="font-semibold text-gray-900 truncate">{{ report.title }}</h3>
                   <BaseBadge
                     size="sm"
-                    :variant="report.status === 'cleaned' ? 'success' : report.status === 'pending' ? 'warning' : 'info'"
+                    :variant="report.status === 'verified' || report.status === 'cleaned' ? 'success' : report.status === 'rejected' ? 'danger' : report.status === 'pending' || report.status === 'pending_review' ? 'warning' : 'info'"
                   >
                     {{ getStatusLabel(report.status) }}
                   </BaseBadge>

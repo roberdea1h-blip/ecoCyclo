@@ -3,6 +3,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReportStore } from '../stores/reportStore'
 import { wasteTypesApi } from '../api/wasteTypes'
+import { reportsApi } from '../api/reports'
 import { useFormValidation } from '../composables/useFormValidation'
 import { reportSchema } from '../utils/validators'
 import type { WasteType } from '../types'
@@ -12,6 +13,7 @@ import BaseTextarea from '../components/base/BaseTextarea.vue'
 import BaseSelect from '../components/base/BaseSelect.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseAlert from '../components/base/BaseAlert.vue'
+import BaseImageUpload from '../components/base/BaseImageUpload.vue'
 import LocationPicker from '../components/maps/LocationPicker.vue'
 
 interface LocalCoords {
@@ -25,6 +27,8 @@ const { errors, validate } = useFormValidation(reportSchema)
 
 const wasteTypes = ref<WasteType[]>([])
 const location = ref<LocalCoords | null>(null)
+const imageFile = ref<File | null>(null)
+const uploading = ref(false)
 
 const form = reactive({
   title: '',
@@ -65,9 +69,15 @@ async function handleSubmit() {
       waste_type_id: form.waste_type_id,
       estimated_quantity: form.estimated_quantity,
     })
+    if (imageFile.value) {
+      uploading.value = true
+      await reportsApi.uploadImage(report.id, imageFile.value, true)
+    }
     router.push(`/reports/${report.id}`)
   } catch {
     // handled by store
+  } finally {
+    uploading.value = false
   }
 }
 </script>
@@ -120,6 +130,8 @@ async function handleSubmit() {
           placeholder="Ej: 5"
         />
 
+        <BaseImageUpload v-model="imageFile" label="Imagen" />
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
             Ubicación <span class="text-red-500">*</span>
@@ -134,8 +146,8 @@ async function handleSubmit() {
         />
 
         <div class="flex gap-3">
-          <BaseButton type="submit" :loading="reportStore.loading">
-            Crear reporte
+          <BaseButton type="submit" :loading="reportStore.loading || uploading">
+            {{ uploading ? 'Subiendo imagen...' : 'Crear reporte' }}
           </BaseButton>
           <router-link to="/reports">
             <BaseButton type="button" variant="secondary">Cancelar</BaseButton>

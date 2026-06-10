@@ -112,3 +112,35 @@ class WasteTypeNotFoundException(HTTPException):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tipo de residuo no encontrado",
         )
+
+
+class CannotDeleteSelfException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar tu propio usuario",
+        )
+
+
+class ReportNotPendingReviewException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El reporte no está esperando revisión",
+        )
+
+
+class NotOriginalReporterException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el creador del reporte puede realizar esta acción",
+        )
+
+
+class RedemptionNotFoundException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Canje no encontrado",
+        )
