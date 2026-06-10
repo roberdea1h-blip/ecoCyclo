@@ -2,8 +2,10 @@ from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ConflictException
 from app.db.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
@@ -28,7 +30,10 @@ class BaseRepository(Generic[ModelType]):
     async def create(self, db: AsyncSession, **kwargs) -> ModelType:
         db_obj = self.model(**kwargs)
         db.add(db_obj)
-        await db.flush()
+        try:
+            await db.flush()
+        except IntegrityError as e:
+            raise ConflictException(message=f"Unique constraint violation: {e.orig}") from e
         await db.refresh(db_obj)
         return db_obj
 

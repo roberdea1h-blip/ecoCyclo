@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
+from app.core.exception_handlers import register_exception_handlers
 from app.db.session import engine
 
 settings = get_settings()
@@ -30,6 +31,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_exception_handlers(app)
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
