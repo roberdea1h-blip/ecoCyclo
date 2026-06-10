@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { useNotificationPolling } from '../../composables/useNotificationPolling'
+import IconLogout from '../icons/IconLogout.vue'
+import IconUser from '../icons/IconUser.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -79,9 +81,10 @@ function isActive(path: string) {
             <span class="max-w-[120px] truncate">{{ userName }}</span>
           </router-link>
           <button
-            class="hidden md:inline-flex text-sm text-gray-500 hover:text-red-600 transition-colors"
+            class="hidden md:inline-flex text-sm text-gray-500 hover:text-red-600 transition-colors items-center gap-2  "
             @click="handleLogout"
           >
+            <IconLogout />
             Salir
           </button>
           <button class="md:hidden p-2 text-gray-500" @click="mobileMenuOpen = !mobileMenuOpen">
@@ -125,13 +128,17 @@ function isActive(path: string) {
             class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
             @click="mobileMenuOpen = false"
           >
-            Perfil
+            <div class="flex items-center gap-2">
+              Perfil
+              <IconUser class=" size-5 "/>
+            </div>
           </router-link>
           <button
-            class="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+            class="flex gap-2 items-center w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
             @click="handleLogout"
           >
             Cerrar sesión
+            <IconLogout/>
           </button>
         </div>
       </Transition>

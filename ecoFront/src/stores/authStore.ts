@@ -38,11 +38,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(email: string, password: string, full_name: string) {
+  async function register(email: string, password: string, full_name: string, username: string) {
     loading.value = true
     error.value = null
     try {
-      await authApi.register({ email, password, full_name })
+      await authApi.register({ email, password, full_name, username })
       await authApi.login({ email, password })
       await fetchUser()
     } catch (e: any) {

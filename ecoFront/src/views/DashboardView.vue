@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useReportStore } from '../stores/reportStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { formatPoints, getStatusLabel, formatDate } from '../utils/format'
+import type { MapMarkerData } from '../components/maps/MapMarker'
 import AppLayout from '../components/shared/AppLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
+import MapView from '../components/maps/MapView.vue'
 import IconGift from '../components/icons/IconGift.vue'
 import IconReport from '../components/icons/IconReport.vue'
 import IconStar from '../components/icons/IconStar.vue'
@@ -15,6 +18,7 @@ import IconBell from '../components/icons/IconBell.vue'
 import IconUser from '../components/icons/IconUser.vue'
 import IconNotification from '../components/icons/IconNotification.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const reportStore = useReportStore()
 const notificationStore = useNotificationStore()
@@ -26,7 +30,28 @@ onMounted(async () => {
   ])
 })
 
-const recentNotifications = notificationStore.notifications.slice(0, 5)
+const recentNotifications = computed(() => (notificationStore.notifications || []).slice(0, 5))
+
+const mapMarkers = computed<MapMarkerData[]>(() =>
+  reportStore.reports
+    .filter(r => typeof r.latitude === 'number' && typeof r.longitude === 'number')
+    .map(r => ({
+      id: r.id,
+      position: { lat: r.latitude, lng: r.longitude },
+      title: r.title,
+      description: r.waste_type_name,
+      icon: r.status,
+    }))
+)
+
+const mapCenter = computed(() => {
+  if (mapMarkers.value.length === 0) return { lat: 19.4326, lng: -99.1332 }
+  return mapMarkers.value[0].position
+})
+
+function onMarkerClick(marker: MapMarkerData) {
+  router.push(`/reports/${marker.id}`)
+}
 </script>
 
 <template>
@@ -98,8 +123,11 @@ const recentNotifications = notificationStore.notifications.slice(0, 5)
           <div v-if="reportStore.loading" class="py-8">
             <BaseSpinner size="sm" text="" />
           </div>
-          <div v-else-if="reportStore.reports.length === 0" class="text-center py-8 text-gray-500">
-            <p>Aún no tienes reportes</p>
+          <div v-else-if="reportStore.reports.length === 0" class="text-center py-12 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
+            </svg>
+            <p class="text-lg font-medium text-gray-500">Aún no tienes reportes</p>
             <router-link to="/reports/create" class="text-emerald-600 hover:text-emerald-700 font-medium text-sm mt-2 inline-block">
               Crear tu primer reporte
             </router-link>
@@ -131,8 +159,11 @@ const recentNotifications = notificationStore.notifications.slice(0, 5)
               Ver todas
             </router-link>
           </div>
-          <div v-if="recentNotifications.length === 0" class="text-center py-8 text-gray-500">
-            <p>Sin notificaciones</p>
+          <div v-if="recentNotifications.length === 0" class="text-center py-12 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
+            </svg>
+            <p class="text-lg font-medium text-gray-500">Sin notificaciones</p>
           </div>
           <div v-else class="space-y-2">
             <div
@@ -153,6 +184,22 @@ const recentNotifications = notificationStore.notifications.slice(0, 5)
           </div>
         </BaseCard>
       </div>
+
+      <BaseCard v-if="mapMarkers.length > 0">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-semibold text-gray-900">Mis reportes en el mapa</h2>
+          <router-link to="/reports" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            Ver todos
+          </router-link>
+        </div>
+        <MapView
+          :center="mapCenter"
+          :zoom="13"
+          :markers="mapMarkers"
+          :height="'300px'"
+          @marker-click="onMarkerClick"
+        />
+      </BaseCard>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <router-link

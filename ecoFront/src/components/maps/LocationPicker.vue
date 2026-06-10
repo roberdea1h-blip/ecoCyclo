@@ -1,13 +1,4 @@
 <script setup lang="ts">
-// Componente para seleccionar ubicación en el mapa.
-// Cuando se integre Leaflet, permitirá al usuario hacer clic
-// en el mapa para seleccionar coordenadas.
-//
-// Uso futuro:
-//   map.on('click', (e: L.LeafletMouseEvent) => {
-//     emit('select', { lat: e.latlng.lat, lng: e.latlng.lng })
-//   })
-
 import MapView from './MapView.vue'
 import type { MapCoordinates } from './MapMarker'
 
@@ -19,6 +10,12 @@ const emit = defineEmits<{
   'update:modelValue': [coords: MapCoordinates]
 }>()
 
+const defaultCenter: MapCoordinates = { lat: 19.4326, lng: -99.1332 }
+
+function onMapClick(coords: MapCoordinates) {
+  emit('update:modelValue', coords)
+}
+
 function useCurrentLocation() {
   if (!navigator.geolocation) {
     alert('Geolocalización no soportada')
@@ -26,14 +23,11 @@ function useCurrentLocation() {
   }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      emit('update:modelValue', {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-      })
+      const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      emit('update:modelValue', coords)
     },
     () => {
-      // Usar coordenadas por defecto si la geolocalización falla
-      emit('update:modelValue', { lat: 19.4326, lng: -99.1332 })
+      emit('update:modelValue', defaultCenter)
     }
   )
 }
@@ -42,23 +36,24 @@ function useCurrentLocation() {
 <template>
   <div class="space-y-2">
     <MapView
-      v-if="modelValue"
-      :center="modelValue"
+      :center="modelValue || defaultCenter"
       :zoom="15"
       :height="'250px'"
+      :clickable="true"
+      @map-click="onMapClick"
     />
-    <div v-else class="bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center" style="height: 250px">
-      <p class="text-sm text-gray-500">Selecciona una ubicación</p>
+    <div class="flex items-center justify-between">
+      <button
+        type="button"
+        class="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+        @click="useCurrentLocation"
+      >
+        Usar mi ubicación actual
+      </button>
+      <p v-if="modelValue" class="text-xs text-gray-500">
+        {{ modelValue.lat.toFixed(6) }}, {{ modelValue.lng.toFixed(6) }}
+      </p>
+      <p v-else class="text-xs text-gray-400">Haz clic en el mapa para seleccionar</p>
     </div>
-    <button
-      type="button"
-      class="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-      @click="useCurrentLocation"
-    >
-      Usar mi ubicación actual
-    </button>
-    <p v-if="modelValue" class="text-xs text-gray-500">
-      Lat: {{ modelValue.lat.toFixed(6) }}, Lng: {{ modelValue.lng.toFixed(6) }}
-    </p>
   </div>
 </template>

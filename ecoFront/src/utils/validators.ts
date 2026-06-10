@@ -13,6 +13,7 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   full_name: z.string().min(2, 'Mínimo 2 caracteres'),
+  username: z.string().min(3, 'Mínimo 3 caracteres').max(30, 'Máximo 30 caracteres'),
 })
 
 export const reportSchema = z.object({

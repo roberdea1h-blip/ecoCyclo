@@ -51,7 +51,6 @@ async function request<T>(
       const { useAuthStore } = await import('../stores/authStore')
       const authStore = useAuthStore()
       authStore.clearUser()
-      window.location.href = '/login'
       throw new ApiError(401, 'Sesión expirada')
     }
   }

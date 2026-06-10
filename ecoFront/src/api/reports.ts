@@ -1,23 +1,23 @@
 import { api } from './http'
-import type { Report, ReportCreate, ReportUpdate, PaginatedResponse } from '../types'
+import type { Report, ReportCreate, ReportUpdate } from '../types'
 
 export const reportsApi = {
-  list(params?: { page?: number; size?: number; status?: string; waste_type_id?: number }) {
+  list(params?: { skip?: number; limit?: number; status?: string; waste_type_id?: number }) {
     const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', String(params.page))
-    if (params?.size) searchParams.set('size', String(params.size))
+    if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.status) searchParams.set('status', params.status)
     if (params?.waste_type_id) searchParams.set('waste_type_id', String(params.waste_type_id))
     const qs = searchParams.toString()
-    return api.get<PaginatedResponse<Report>>(`/reports${qs ? `?${qs}` : ''}`)
+    return api.get<Report[]>(`/reports${qs ? `?${qs}` : ''}`)
   },
 
-  mine(params?: { page?: number; size?: number }) {
+  mine(params?: { skip?: number; limit?: number }) {
     const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', String(params.page))
-    if (params?.size) searchParams.set('size', String(params.size))
+    if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
     const qs = searchParams.toString()
-    return api.get<PaginatedResponse<Report>>(`/reports/mine${qs ? `?${qs}` : ''}`)
+    return api.get<Report[]>(`/reports/mine${qs ? `?${qs}` : ''}`)
   },
 
   get(id: number) {

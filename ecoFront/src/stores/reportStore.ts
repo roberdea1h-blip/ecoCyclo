@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Report, ReportCreate, ReportUpdate, PaginatedResponse } from '../types'
+import type { Report, ReportCreate, ReportUpdate } from '../types'
 import { reportsApi } from '../api/reports'
 
 export const useReportStore = defineStore('report', () => {
@@ -22,15 +22,17 @@ export const useReportStore = defineStore('report', () => {
     loading.value = true
     error.value = null
     try {
+      const p = params?.page || page.value
       const result = await reportsApi.list({
-        page: params?.page || page.value,
+        skip: (p - 1) * 20,
+        limit: 20,
         status: filterStatus.value,
         waste_type_id: filterWasteType.value,
       })
-      reports.value = result.items
-      total.value = result.total
-      page.value = result.page
-      pages.value = result.pages
+      reports.value = result || []
+      total.value = result.length
+      page.value = p
+      pages.value = 0
     } catch (e: any) {
       error.value = e.message || 'Error al cargar reportes'
     } finally {
@@ -42,11 +44,14 @@ export const useReportStore = defineStore('report', () => {
     loading.value = true
     error.value = null
     try {
-      const result = await reportsApi.mine({ page: params?.page || 1 })
-      reports.value = result.items
-      total.value = result.total
-      page.value = result.page
-      pages.value = result.pages
+      const result = await reportsApi.mine({
+        skip: 0,
+        limit: 100,
+      })
+      reports.value = result || []
+      total.value = result.length
+      page.value = 1
+      pages.value = 0
     } catch (e: any) {
       error.value = e.message || 'Error al cargar tus reportes'
     } finally {

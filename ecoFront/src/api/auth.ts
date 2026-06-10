@@ -2,7 +2,7 @@ import { api } from './http'
 import type { User } from '../types'
 
 export const authApi = {
-  register(data: { email: string; password: string; full_name: string }) {
+  register(data: { email: string; password: string; full_name: string; username: string }) {
     return api.post<User>('/auth/register', data)
   },
 

@@ -16,12 +16,14 @@ const form = reactive({
   email: '',
   password: '',
   full_name: '',
+  username: '',
 })
 
 async function handleSubmit() {
   if (!validate(form)) return
   try {
-    await authStore.register(form.email, form.password, form.full_name)
+    console.log('Submitting form:', form)
+    await authStore.register(form.email, form.password, form.full_name, form.username)
     router.push('/dashboard')
   } catch {
     // error handled by store
@@ -47,6 +49,13 @@ async function handleSubmit() {
             placeholder="Tu nombre"
             required
             :error="errors.full_name"
+          />
+          <BaseInput
+            v-model="form.username"
+            label="Nombre de usuario"
+            placeholder="Tu nombre de usuario"
+            required
+            :error="errors.username"
           />
           <BaseInput
             v-model="form.email"
