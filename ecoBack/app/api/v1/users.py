@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.db.session import get_db
+from app.mappers.user_mapper import to_user_response
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate
 from app.services.user_service import user_service
@@ -20,7 +21,7 @@ async def health_check():
 
 @router.get("/me", response_model=UserResponse)
 async def get_my_profile(current_user: User = Depends(get_current_user)):
-    return current_user
+    return to_user_response(current_user)
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -35,7 +36,7 @@ async def update_my_profile(
         full_name=data.full_name,
         avatar_url=data.avatar_url,
     )
-    return user
+    return to_user_response(user)
 
 
 @router.post("/me/avatar", response_model=UserResponse)
@@ -49,7 +50,7 @@ async def upload_avatar(
     user = await user_service.update_profile(
         db, current_user.id, avatar_url=avatar_url,
     )
-    return user
+    return to_user_response(user)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -59,4 +60,4 @@ async def get_user(
     current_user: User = Depends(get_current_user),
 ):
     user = await user_service.get_by_id(db, user_id)
-    return user
+    return to_user_response(user)

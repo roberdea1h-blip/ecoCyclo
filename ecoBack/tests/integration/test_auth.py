@@ -64,20 +64,21 @@ class TestAuthRegisterIntegration:
 
 
 class TestAuthLoginIntegration:
-    async def test_login_happy_path(self, client):
+    async def test_login_happy_path(self, client, mock_user):
         from unittest.mock import AsyncMock, patch
 
         with patch.object(
             auth_service, "login",
-            new=AsyncMock(return_value=("access123", "refresh123", None)),
+            new=AsyncMock(return_value=("access123", "refresh123", mock_user)),
         ):
             response = await client.post("/api/v1/auth/login", json={"email": "a@b.com", "password": "pass123"})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["access_token"] == "access123"
-        assert data["refresh_token"] == "refresh123"
-        assert data["token_type"] == "bearer"
+        assert data["authenticated"] is True
+        assert data["user"]["email"] == mock_user.email
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
 
     async def test_login_bad_credentials(self, client):
         from app.utils.exceptions import CredentialsException
@@ -103,12 +104,14 @@ class TestAuthRefreshIntegration:
             auth_service, "refresh",
             new=AsyncMock(return_value=("new_access", "new_refresh")),
         ):
-            response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "valid_refresh_token"})
+            response = await client.post(
+                "/api/v1/auth/refresh",
+                cookies={"refresh_token": "valid_refresh_token"},
+            )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["access_token"] == "new_access"
-        assert data["refresh_token"] == "new_refresh"
+        assert data["authenticated"] is True
 
     async def test_refresh_invalid_token(self, client):
         from app.utils.exceptions import InvalidToken

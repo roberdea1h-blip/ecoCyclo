@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.core.security import clear_auth_cookies, set_auth_cookies
 from app.db.session import get_db
+from app.mappers.user_mapper import to_login_response, to_user_response
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
@@ -24,7 +25,7 @@ async def health_check():
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
     user = await auth_service.register(db, request)
-    return user
+    return to_user_response(user)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -35,7 +36,7 @@ async def login(
 ):
     access_token, refresh_token, user = await auth_service.login(db, request.email, request.password)
     set_auth_cookies(response, access_token, refresh_token)
-    return LoginResponse(authenticated=True, user=user)  # type: ignore[arg-type]
+    return to_login_response(True, user)
 
 
 @router.post("/refresh", response_model=dict)
@@ -68,4 +69,4 @@ async def logout(
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return to_user_response(current_user)

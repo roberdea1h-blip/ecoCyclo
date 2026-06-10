@@ -39,7 +39,7 @@ async def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = await user_repository.get(db, UUID(user_id))
+    user = await user_repository.get_with_role(db, UUID(user_id))
     if user is None or not user.is_active:
         raise credentials_exception
 

@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     role_id: UUID
+    role_name: str | None = None
     avatar_url: str | None
     points: int
     created_at: datetime

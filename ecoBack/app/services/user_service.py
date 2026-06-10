@@ -20,7 +20,7 @@ class UserService:
     async def update_profile(
         self, db: AsyncSession, user_id: UUID, full_name: str | None = None, avatar_url: str | None = None
     ) -> User:
-        user = await user_repository.get(db, user_id)
+        user = await user_repository.get_with_role(db, user_id)
         if user is None:
             raise UserNotFoundException()
 

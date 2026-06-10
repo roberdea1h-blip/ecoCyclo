@@ -25,7 +25,11 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     role: Mapped["Role"] = relationship("Role", back_populates="users")  # noqa: F821
-    reports: Mapped[list["Report"]] = relationship("Report", back_populates="user")  # noqa: F821
+
+    @property
+    def role_name(self) -> str | None:
+        return self.role.name if self.role else None
+    reports: Mapped[list["Report"]] = relationship("Report", back_populates="user", foreign_keys="Report.user_id")  # noqa: F821
     cleanup_records: Mapped[list["CleanupRecord"]] = relationship("CleanupRecord", back_populates="user")  # noqa: F821
     redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="user")  # noqa: F821
     point_transactions: Mapped[list["PointTransaction"]] = relationship("PointTransaction", back_populates="user")  # noqa: F821

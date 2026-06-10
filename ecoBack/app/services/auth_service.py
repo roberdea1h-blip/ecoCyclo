@@ -51,6 +51,7 @@ class AuthService:
             full_name=request.full_name,
             role_id=user_role.id,
         )
+        await db.refresh(user, ["role"])
         return user
 
     async def login(self, db: AsyncSession, email: str, password: str) -> tuple[str, str, User]:

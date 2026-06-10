@@ -92,6 +92,7 @@ def mock_user(user_id, user_role_id, mock_role):
     user.is_verified = True
     user.role_id = user_role_id
     user.role = mock_role
+    user.role_name = "user"
     user.avatar_url = None
     user.points = 100
     user.created_at = datetime.now(timezone.utc)
@@ -111,6 +112,7 @@ def mock_admin_user(admin_role_id, mock_admin_role):
     user.is_verified = True
     user.role_id = admin_role_id
     user.role = mock_admin_role
+    user.role_name = "admin"
     user.avatar_url = None
     user.points = 9999
     user.created_at = datetime.now(timezone.utc)
@@ -130,9 +132,32 @@ def mock_report():
     report.longitude = -74.0060
     report.address = "123 Test St"
     report.status = "pending"
+    report.estimated_quantity = None
+    report.cleaner_id = None
+    report.cleaner_name = None
     report.cleaned_at = None
+    report.waste_type_name = "Plastic"
+    report.user_name = "Test User"
+    report.image_url = None
     report.created_at = datetime.now(timezone.utc)
     report.updated_at = datetime.now(timezone.utc)
+    return report
+
+
+@pytest.fixture
+def mock_report_in_progress(mock_report, user_id):
+    report = mock_report
+    report.status = "in_progress"
+    report.cleaner_id = user_id
+    report.cleaner_name = "Test User"
+    return report
+
+
+@pytest.fixture
+def mock_report_cleaned(mock_report_in_progress, user_id):
+    report = mock_report_in_progress
+    report.status = "cleaned"
+    report.cleaned_at = datetime.now(timezone.utc)
     return report
 
 

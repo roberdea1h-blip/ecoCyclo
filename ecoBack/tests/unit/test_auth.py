@@ -84,20 +84,21 @@ class TestAuthRegister:
 
 
 class TestAuthLogin:
-    async def test_login_valid_credentials_returns_tokens(self, client):
+    async def test_login_valid_credentials_returns_tokens(self, client, mock_user):
         payload = {"email": "test@example.com", "password": "correctpassword"}
 
         with patch.object(
             auth_service, "login",
-            new=AsyncMock(return_value=("access.token.here", "refresh.token.here", None)),
+            new=AsyncMock(return_value=("access.token.here", "refresh.token.here", mock_user)),
         ):
             response = await client.post("/api/v1/auth/login", json=payload)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert data["token_type"] == "bearer"
+        assert data["authenticated"] is True
+        assert data["user"]["email"] == "testuser@example.com"
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
 
     async def test_login_invalid_credentials_returns_401(self, client):
         from app.utils.exceptions import CredentialsException
@@ -126,18 +127,18 @@ class TestAuthLogin:
 
 class TestAuthRefresh:
     async def test_refresh_valid_token_returns_new_tokens(self, client):
-        payload = {"refresh_token": "valid.refresh.token"}
-
         with patch.object(
             auth_service, "refresh",
             new=AsyncMock(return_value=("new.access.token", "new.refresh.token")),
         ):
-            response = await client.post("/api/v1/auth/refresh", json=payload)
+            response = await client.post(
+                "/api/v1/auth/refresh",
+                cookies={"refresh_token": "valid.refresh.token"},
+            )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["access_token"] == "new.access.token"
-        assert data["refresh_token"] == "new.refresh.token"
+        assert data["authenticated"] is True
 
     async def test_refresh_invalid_token_returns_401(self, client):
         from app.utils.exceptions import InvalidToken
