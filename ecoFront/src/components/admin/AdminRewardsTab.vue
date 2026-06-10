@@ -2,35 +2,24 @@
 import { onMounted, ref } from 'vue'
 import { adminApi } from '../../api/admin'
 import { useRewardStore } from '../../stores/rewardStore'
-import { useFormValidation } from '../../composables/useFormValidation'
-import { rewardSchema } from '../../utils/validators'
 import { formatPoints, resolveImageUrl } from '../../utils/format'
 import type { Reward } from '../../types'
 import BaseBadge from '../base/BaseBadge.vue'
 import BaseButton from '../base/BaseButton.vue'
-import BaseInput from '../base/BaseInput.vue'
-import BaseTextarea from '../base/BaseTextarea.vue'
 import BaseSpinner from '../base/BaseSpinner.vue'
-import BaseModal from '../base/BaseModal.vue'
-import BaseImageUpload from '../base/BaseImageUpload.vue'
 import IconGift from '../icons/IconGift.vue'
+import AdminCreateRewardModal from '../modals/AdminCreateRewardModal.vue'
+import AdminEditRewardModal from '../modals/AdminEditRewardModal.vue'
 
 const rewardStore = useRewardStore()
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const showCreateReward = ref(false)
-const rewardForm = ref({ name: '', description: '', points_cost: 0, stock: 0 })
-const { errors: rewardErrors, validate: validateReward } = useFormValidation(rewardSchema)
-const creatingReward = ref(false)
 const rewardCreated = ref(false)
-const rewardImageFile = ref<File | null>(null)
-const uploadingImage = ref(false)
 
 const showEditRewardModal = ref(false)
 const editingReward = ref<Reward | null>(null)
-const editRewardForm = ref({ name: '', description: '', points_cost: 0, stock: 0 })
-const savingReward = ref(false)
 
 onMounted(async () => {
   loading.value = true
@@ -42,58 +31,39 @@ onMounted(async () => {
 })
 
 function openCreateReward() {
-  rewardForm.value = { name: '', description: '', points_cost: 0, stock: 0 }
   rewardCreated.value = false
-  rewardImageFile.value = null
   showCreateReward.value = true
 }
 
-async function handleCreateReward() {
-  rewardForm.value.points_cost = Number(rewardForm.value.points_cost) || 0
-  rewardForm.value.stock = Number(rewardForm.value.stock) || 0
-  if (!validateReward(rewardForm.value)) return
-  creatingReward.value = true
+async function handleCreateReward(data: { data: { name: string; description: string; points_cost: number; stock: number }; imageFile: File | null }) {
   try {
-    const reward = await adminApi.createReward(rewardForm.value)
-    if (rewardImageFile.value) {
-      uploadingImage.value = true
+    const reward = await adminApi.createReward(data.data)
+    if (data.imageFile) {
       const formData = new FormData()
-      formData.append('file', rewardImageFile.value)
+      formData.append('file', data.imageFile)
       await adminApi.uploadRewardImage(reward.id, formData)
     }
     await rewardStore.fetchRewards()
     rewardCreated.value = true
   } catch (e: any) {
     error.value = e.message || 'Error al crear recompensa'
-  } finally {
-    creatingReward.value = false
-    uploadingImage.value = false
   }
 }
 
 function openEditReward(r: Reward) {
   editingReward.value = r
-  editRewardForm.value = {
-    name: r.name,
-    description: r.description,
-    points_cost: r.points_cost,
-    stock: r.stock ?? 0,
-  }
   showEditRewardModal.value = true
 }
 
-async function handleSaveReward() {
+async function handleSaveReward(data: { name: string; description: string; points_cost: number; stock: number }) {
   if (!editingReward.value) return
-  savingReward.value = true
   try {
-    const updated = await adminApi.updateReward(editingReward.value.id, editRewardForm.value)
+    const updated = await adminApi.updateReward(editingReward.value.id, data)
     const idx = rewardStore.rewards.findIndex(r => r.id === editingReward.value!.id)
     if (idx !== -1) rewardStore.rewards[idx] = updated
     showEditRewardModal.value = false
   } catch (e: any) {
     error.value = e.message || 'Error al actualizar recompensa'
-  } finally {
-    savingReward.value = false
   }
 }
 
@@ -136,76 +106,18 @@ async function handleDeleteReward(id: string) {
       </div>
     </div>
 
-    <BaseModal v-model="showCreateReward" title="Crear recompensa">
-      <div v-if="rewardCreated" class="text-center py-6">
-        <span class="text-4xl">✅</span>
-        <p class="text-lg font-semibold text-gray-900 mt-3">Recompensa creada</p>
-        <BaseButton class="mt-4" @click="showCreateReward = false">Cerrar</BaseButton>
-      </div>
-      <form v-else @submit.prevent="handleCreateReward" class="space-y-4">
-        <BaseInput
-          v-model="rewardForm.name"
-          label="Nombre"
-          required
-          :error="rewardErrors.name"
-        />
-        <BaseTextarea
-          v-model="rewardForm.description"
-          label="Descripción"
-          required
-          :error="rewardErrors.description"
-        />
-        <BaseInput
-          v-model="rewardForm.points_cost"
-          label="Costo en puntos"
-          type="number"
-          required
-          :error="rewardErrors.points_cost"
-        />
-        <BaseInput
-          v-model="rewardForm.stock"
-          label="Stock"
-          type="number"
-          required
-          :error="rewardErrors.stock"
-        />
-        <BaseImageUpload v-model="rewardImageFile" label="Imagen" />
-        <div class="flex gap-3">
-          <BaseButton type="submit" :loading="creatingReward || uploadingImage">Crear</BaseButton>
-          <BaseButton type="button" variant="secondary" @click="showCreateReward = false">Cancelar</BaseButton>
-        </div>
-      </form>
-    </BaseModal>
+    <AdminCreateRewardModal
+      :show="showCreateReward"
+      :reward-created="rewardCreated"
+      @update:show="showCreateReward = $event"
+      @save="handleCreateReward"
+    />
 
-    <BaseModal v-model="showEditRewardModal" title="Editar recompensa">
-      <form @submit.prevent="handleSaveReward" class="space-y-4">
-        <BaseInput
-          v-model="editRewardForm.name"
-          label="Nombre"
-          required
-        />
-        <BaseTextarea
-          v-model="editRewardForm.description"
-          label="Descripción"
-          required
-        />
-        <BaseInput
-          v-model.number="editRewardForm.points_cost"
-          label="Costo en puntos"
-          type="number"
-          required
-        />
-        <BaseInput
-          v-model.number="editRewardForm.stock"
-          label="Stock"
-          type="number"
-          required
-        />
-        <div class="flex gap-3">
-          <BaseButton type="submit" :loading="savingReward">Guardar</BaseButton>
-          <BaseButton type="button" variant="secondary" @click="showEditRewardModal = false">Cancelar</BaseButton>
-        </div>
-      </form>
-    </BaseModal>
+    <AdminEditRewardModal
+      :show="showEditRewardModal"
+      :reward="editingReward"
+      @update:show="showEditRewardModal = $event"
+      @save="handleSaveReward"
+    />
   </div>
 </template>

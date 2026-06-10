@@ -4,9 +4,8 @@ import { adminApi } from '../../api/admin'
 import type { WasteType, WasteTypeCreate } from '../../types'
 import BaseBadge from '../base/BaseBadge.vue'
 import BaseButton from '../base/BaseButton.vue'
-import BaseInput from '../base/BaseInput.vue'
 import BaseSpinner from '../base/BaseSpinner.vue'
-import BaseModal from '../base/BaseModal.vue'
+import AdminWasteTypeFormModal from '../modals/AdminWasteTypeFormModal.vue'
 
 const wasteTypes = ref<WasteType[]>([])
 const loading = ref(false)
@@ -14,8 +13,6 @@ const error = ref<string | null>(null)
 
 const showWasteTypeModal = ref(false)
 const editingWasteType = ref<WasteType | null>(null)
-const wasteTypeForm = ref<WasteTypeCreate>({ name: '', description: '', icon: '', points_per_report: 10 })
-const savingWasteType = ref(false)
 
 onMounted(async () => {
   loading.value = true
@@ -30,38 +27,27 @@ onMounted(async () => {
 
 function openCreateWasteType() {
   editingWasteType.value = null
-  wasteTypeForm.value = { name: '', description: '', icon: '', points_per_report: 10 }
   showWasteTypeModal.value = true
 }
 
 function openEditWasteType(wt: WasteType) {
   editingWasteType.value = wt
-  wasteTypeForm.value = {
-    name: wt.name,
-    description: wt.description || '',
-    icon: wt.icon || '',
-    points_per_report: wt.points_per_report,
-  }
   showWasteTypeModal.value = true
 }
 
-async function handleSaveWasteType() {
-  if (!wasteTypeForm.value.name.trim()) return
-  savingWasteType.value = true
+async function handleSaveWasteType(data: WasteTypeCreate) {
   try {
     if (editingWasteType.value) {
-      const updated = await adminApi.updateWasteType(editingWasteType.value.id, wasteTypeForm.value)
+      const updated = await adminApi.updateWasteType(editingWasteType.value.id, data)
       const idx = wasteTypes.value.findIndex(w => w.id === editingWasteType.value!.id)
       if (idx !== -1) wasteTypes.value[idx] = updated
     } else {
-      const created = await adminApi.createWasteType(wasteTypeForm.value)
+      const created = await adminApi.createWasteType(data)
       wasteTypes.value.push(created)
     }
     showWasteTypeModal.value = false
   } catch (e: any) {
     error.value = e.message || 'Error al guardar tipo de residuo'
-  } finally {
-    savingWasteType.value = false
   }
 }
 
@@ -116,37 +102,11 @@ async function handleDeleteWasteType(id: string) {
       </table>
     </div>
 
-    <BaseModal v-model="showWasteTypeModal" :title="editingWasteType ? 'Editar tipo de residuo' : 'Crear tipo de residuo'">
-      <form @submit.prevent="handleSaveWasteType" class="space-y-4">
-        <BaseInput
-          v-model="wasteTypeForm.name"
-          label="Nombre"
-          placeholder="Ej: Plástico"
-          required
-        />
-        <BaseInput
-          v-model="wasteTypeForm.description"
-          label="Descripción"
-          placeholder="Breve descripción del tipo de residuo"
-        />
-        <BaseInput
-          v-model="wasteTypeForm.icon"
-          label="Icono"
-          placeholder="Identificador del icono"
-        />
-        <BaseInput
-          v-model.number="wasteTypeForm.points_per_report"
-          label="Puntos por reporte"
-          type="number"
-          min="0"
-        />
-        <div class="flex gap-3">
-          <BaseButton type="submit" :loading="savingWasteType">
-            {{ editingWasteType ? 'Guardar' : 'Crear' }}
-          </BaseButton>
-          <BaseButton type="button" variant="secondary" @click="showWasteTypeModal = false">Cancelar</BaseButton>
-        </div>
-      </form>
-    </BaseModal>
+    <AdminWasteTypeFormModal
+      :show="showWasteTypeModal"
+      :waste-type="editingWasteType"
+      @update:show="showWasteTypeModal = $event"
+      @save="handleSaveWasteType"
+    />
   </div>
 </template>

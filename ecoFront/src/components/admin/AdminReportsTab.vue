@@ -6,11 +6,8 @@ import { getStatusLabel, formatDate } from '../../utils/format'
 import type { Report } from '../../types'
 import BaseBadge from '../base/BaseBadge.vue'
 import BaseButton from '../base/BaseButton.vue'
-import BaseInput from '../base/BaseInput.vue'
-import BaseTextarea from '../base/BaseTextarea.vue'
-import BaseSelect from '../base/BaseSelect.vue'
 import BaseSpinner from '../base/BaseSpinner.vue'
-import BaseModal from '../base/BaseModal.vue'
+import AdminEditReportModal from '../modals/AdminEditReportModal.vue'
 
 const reports = ref<Report[]>([])
 const loading = ref(false)
@@ -18,16 +15,6 @@ const error = ref<string | null>(null)
 
 const showEditModal = ref(false)
 const editingReport = ref<Report | null>(null)
-const editForm = ref({ title: '', description: '', address: '', estimated_quantity: null as number | null, status: '' })
-
-const statusOptions = [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'in_progress', label: 'En progreso' },
-  { value: 'pending_review', label: 'Pendiente de revisión' },
-  { value: 'verified', label: 'Verificado' },
-  { value: 'rejected', label: 'Rechazado' },
-  { value: 'cleaned', label: 'Limpiado' },
-]
 
 onMounted(async () => {
   loading.value = true
@@ -42,20 +29,13 @@ onMounted(async () => {
 
 function openEdit(r: Report) {
   editingReport.value = r
-  editForm.value = {
-    title: r.title,
-    description: r.description || '',
-    address: r.address || '',
-    estimated_quantity: r.estimated_quantity,
-    status: r.status,
-  }
   showEditModal.value = true
 }
 
-async function handleEdit() {
+async function handleEdit(data: { title: string; description: string; address: string; estimated_quantity: number | null; status: string }) {
   if (!editingReport.value) return
   try {
-    const updated = await reportsApi.update(editingReport.value.id, editForm.value)
+    const updated = await reportsApi.update(editingReport.value.id, data)
     const idx = reports.value.findIndex(r => r.id === editingReport.value!.id)
     if (idx !== -1) reports.value[idx] = updated
     showEditModal.value = false
@@ -123,38 +103,11 @@ async function handleDelete(id: string) {
       </table>
     </div>
 
-    <BaseModal v-model="showEditModal" title="Editar reporte">
-      <form @submit.prevent="handleEdit" class="space-y-4">
-        <BaseInput
-          v-model="editForm.title"
-          label="Título"
-          required
-        />
-        <BaseTextarea
-          v-model="editForm.description"
-          label="Descripción"
-        />
-        <BaseInput
-          v-model="editForm.address"
-          label="Dirección"
-        />
-        <BaseInput
-          v-model.number="editForm.estimated_quantity"
-          label="Cantidad estimada (kg)"
-          type="number"
-          min="0"
-          step="0.1"
-        />
-        <BaseSelect
-          v-model="editForm.status"
-          label="Estado"
-          :options="statusOptions"
-        />
-        <div class="flex gap-3">
-          <BaseButton type="submit">Guardar</BaseButton>
-          <BaseButton type="button" variant="secondary" @click="showEditModal = false">Cancelar</BaseButton>
-        </div>
-      </form>
-    </BaseModal>
+    <AdminEditReportModal
+      :show="showEditModal"
+      :report="editingReport"
+      @update:show="showEditModal = $event"
+      @save="handleEdit"
+    />
   </div>
 </template>

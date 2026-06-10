@@ -8,10 +8,9 @@ import BaseCard from '../components/base/BaseCard.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
-import BaseModal from '../components/base/BaseModal.vue'
 import BaseAlert from '../components/base/BaseAlert.vue'
 import IconGift from '../components/icons/IconGift.vue'
-import IconParty from '../components/icons/IconParty.vue'
+import RewardRedeemModal from '../components/modals/RewardRedeemModal.vue'
 import IconStar from '../components/icons/IconStar.vue'
 import type { Reward } from '../types'
 
@@ -21,8 +20,6 @@ const authStore = useAuthStore()
 const selectedReward = ref<Reward | null>(null)
 const showConfirmModal = ref(false)
 const redeemSuccess = ref(false)
-const deliveryType = ref<string>('')
-const deliveryInfo = ref<string>('')
 
 onMounted(async () => {
   await rewardStore.fetchRewards()
@@ -31,17 +28,12 @@ onMounted(async () => {
 function openConfirm(reward: Reward) {
   selectedReward.value = reward
   redeemSuccess.value = false
-  deliveryType.value = ''
-  deliveryInfo.value = ''
   showConfirmModal.value = true
 }
 
-async function confirmRedeem() {
+async function handleConfirm(data: { delivery_type?: string; delivery_info?: string }) {
   if (!selectedReward.value) return
   try {
-    const data: { delivery_type?: string; delivery_info?: string } = {}
-    if (deliveryType.value) data.delivery_type = deliveryType.value
-    if (deliveryInfo.value) data.delivery_info = deliveryInfo.value
     await rewardStore.redeemReward(selectedReward.value.id, data)
     redeemSuccess.value = true
     if (authStore.user) {
@@ -106,46 +98,15 @@ async function confirmRedeem() {
       </div>
     </div>
 
-    <BaseModal v-model="showConfirmModal" title="Confirmar canje">
-      <div v-if="redeemSuccess" class="text-center py-6">
-        <IconParty class="w-12 h-12 mx-auto text-emerald-500" />
-        <p class="text-lg font-semibold text-gray-900 mt-3">¡Canje exitoso!</p>
-        <p class="text-sm text-gray-600 mt-1">
-          Has canjeado "{{ selectedReward?.name }}" por {{ formatPoints(selectedReward?.points_cost || 0) }} puntos.
-        </p>
-        <BaseButton class="mt-4" @click="showConfirmModal = false">Cerrar</BaseButton>
-      </div>
-      <div v-else class="space-y-4">
-        <p class="text-gray-700">
-          ¿Canjear <strong>{{ selectedReward?.name }}</strong> por
-          <strong>{{ formatPoints(selectedReward?.points_cost || 0) }}</strong> puntos?
-        </p>
-        <div class="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
-          <span>Puntos actuales:</span>
-          <span class="font-semibold text-gray-900">{{ formatPoints(authStore.userPoints) }}</span>
-          <span class="mx-1">&rarr;</span>
-          <span class="font-semibold text-gray-900">{{ formatPoints(authStore.userPoints - (selectedReward?.points_cost || 0)) }}</span>
-        </div>
-        <BaseInput
-          v-model="deliveryType"
-          label="Tipo de entrega (opcional)"
-          placeholder="Ej: Retiro en tienda, Envío a domicilio"
-        />
-        <BaseInput
-          v-model="deliveryInfo"
-          label="Información de entrega (opcional)"
-          placeholder="Dirección, instrucciones, etc."
-        />
-        <BaseAlert v-if="rewardStore.error" variant="error">
-          {{ rewardStore.error }}
-        </BaseAlert>
-      </div>
-      <template #footer>
-        <template v-if="!redeemSuccess">
-          <BaseButton variant="secondary" @click="showConfirmModal = false">Cancelar</BaseButton>
-          <BaseButton :loading="rewardStore.loading" @click="confirmRedeem">Confirmar canje</BaseButton>
-        </template>
-      </template>
-    </BaseModal>
+    <RewardRedeemModal
+      :show="showConfirmModal"
+      :reward="selectedReward"
+      :user-points="authStore.userPoints"
+      :error="rewardStore.error"
+      :redeem-success="redeemSuccess"
+      :loading="rewardStore.loading"
+      @update:show="showConfirmModal = $event"
+      @confirm="handleConfirm"
+    />
   </AppLayout>
 </template>

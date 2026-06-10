@@ -10,10 +10,10 @@ import BaseCard from '../components/base/BaseCard.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
-import BaseInput from '../components/base/BaseInput.vue'
-import BaseTextarea from '../components/base/BaseTextarea.vue'
-import BaseModal from '../components/base/BaseModal.vue'
-import BaseSelect from '../components/base/BaseSelect.vue'
+import ReportEditModal from '../components/modals/ReportEditModal.vue'
+import ReportCompleteModal from '../components/modals/ReportCompleteModal.vue'
+import ReportRejectModal from '../components/modals/ReportRejectModal.vue'
+import ReportUnclaimModal from '../components/modals/ReportUnclaimModal.vue'
 import MapView from '../components/maps/MapView.vue'
 
 const route = useRoute()
@@ -23,27 +23,20 @@ const authStore = useAuthStore()
 
 const isFetching = ref(true)
 
-const showEditModal = ref(false)
-const editForm = ref({ title: '', description: '', address: '', latitude: 0, longitude: 0, estimated_quantity: null as number | null, status: '' })
 const deleting = ref(false)
-const showCompleteModal = ref(false)
-const collectedWeight = ref<number | undefined>()
-const completionNotes = ref('')
-const showRejectModal = ref(false)
-const rejectReason = ref('')
-const showUnclaimModal = ref(false)
 const imageFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
 const uploadingImage = ref(false)
 
-const statusOptions = [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'in_progress', label: 'En progreso' },
-  { value: 'cleaned', label: 'Limpiado' },
-  { value: 'pending_review', label: 'Pendiente de revisión' },
-  { value: 'verified', label: 'Verificado' },
-  { value: 'rejected', label: 'Rechazado' },
-]
+const showEditModal = ref(false)
+const showCompleteModal = ref(false)
+const showRejectModal = ref(false)
+const showUnclaimModal = ref(false)
+
+function openEdit() { showEditModal.value = true }
+function openComplete() { showCompleteModal.value = true }
+function openReject() { showRejectModal.value = true }
+function openUnclaim() { showUnclaimModal.value = true }
 
 async function loadReport(id: string) {
   if (!id) {
@@ -102,37 +95,14 @@ async function handleClaim() {
   }
 }
 
-function openComplete() {
-  collectedWeight.value = undefined
-  completionNotes.value = ''
-  showCompleteModal.value = true
-}
-
-async function handleComplete() {
+function handleComplete(data: { collected_weight?: number; notes?: string }) {
   if (!report.value) return
-  try {
-    await reportStore.completeReport(report.value.id, {
-      collected_weight: collectedWeight.value,
-      notes: completionNotes.value || undefined,
-    })
-    showCompleteModal.value = false
-  } catch {
-    // handled by store
-  }
+  reportStore.completeReport(report.value.id, data)
 }
 
-function openUnclaim() {
-  showUnclaimModal.value = true
-}
-
-async function handleUnclaim() {
+function handleUnclaim() {
   if (!report.value) return
-  try {
-    await reportStore.unclaimReport(report.value.id)
-    showUnclaimModal.value = false
-  } catch {
-    // handled by store
-  }
+  reportStore.unclaimReport(report.value.id)
 }
 
 async function handleVerify() {
@@ -144,52 +114,14 @@ async function handleVerify() {
   }
 }
 
-function openReject() {
-  rejectReason.value = ''
-  showRejectModal.value = true
-}
-
-async function handleReject() {
+function handleReject(data: { reason?: string }) {
   if (!report.value) return
-  try {
-    await reportStore.rejectReport(report.value.id, rejectReason.value || undefined)
-    showRejectModal.value = false
-  } catch {
-    // handled by store
-  }
+  reportStore.rejectReport(report.value.id, data.reason)
 }
 
-function openEdit() {
-  const r = report.value
-  if (!r) return
-  editForm.value = {
-    title: r.title,
-    description: r.description || '',
-    address: r.address || '',
-    latitude: r.latitude,
-    longitude: r.longitude,
-    estimated_quantity: r.estimated_quantity,
-    status: r.status,
-  }
-  showEditModal.value = true
-}
-
-async function handleEdit() {
+function handleEdit(data: Record<string, unknown>) {
   if (!report.value) return
-  const data: Record<string, any> = {}
-  if (editForm.value.title !== report.value.title) data.title = editForm.value.title
-  if (editForm.value.description !== (report.value.description || '')) data.description = editForm.value.description || null
-  if (editForm.value.address !== (report.value.address || '')) data.address = editForm.value.address || null
-  if (editForm.value.estimated_quantity !== report.value.estimated_quantity) data.estimated_quantity = editForm.value.estimated_quantity
-  if (editForm.value.status !== report.value.status) data.status = editForm.value.status
-  if (editForm.value.latitude !== report.value.latitude) data.latitude = editForm.value.latitude
-  if (editForm.value.longitude !== report.value.longitude) data.longitude = editForm.value.longitude
-  if (Object.keys(data).length === 0) {
-    showEditModal.value = false
-    return
-  }
-  await reportStore.updateReport(report.value.id, data)
-  showEditModal.value = false
+  reportStore.updateReport(report.value.id, data)
 }
 
 function onFileChange(e: Event) {
@@ -400,92 +332,29 @@ async function handleUploadImage() {
       </template>
     </div>
 
-    <BaseModal v-model="showEditModal" title="Editar reporte">
-      <form @submit.prevent="handleEdit" class="space-y-4">
-        <BaseInput
-          v-model="editForm.title"
-          label="Título"
-          required
-        />
-        <BaseTextarea
-          v-model="editForm.description"
-          label="Descripción"
-        />
-        <BaseInput
-          v-model="editForm.address"
-          label="Dirección"
-        />
-        <div class="grid grid-cols-2 gap-3">
-            <BaseInput v-model.number="editForm.latitude" label="Latitud" type="number" step="any" />
-            <BaseInput v-model.number="editForm.longitude" label="Longitud" type="number" step="any" />
-          </div>
-          <BaseInput
-            v-model.number="editForm.estimated_quantity"
-            label="Cantidad estimada (kg)"
-            type="number"
-            min="0"
-            step="0.1"
-          />
-        <BaseSelect
-          v-model="editForm.status"
-          label="Estado"
-          :options="statusOptions"
-        />
-        <div class="flex gap-3">
-          <BaseButton type="submit" :loading="reportStore.loading">Guardar</BaseButton>
-          <BaseButton type="button" variant="secondary" @click="showEditModal = false">Cancelar</BaseButton>
-        </div>
-      </form>
-    </BaseModal>
-
-    <BaseModal v-model="showCompleteModal" title="Completar limpieza">
-      <div class="space-y-4">
-        <BaseInput
-          v-model.number="collectedWeight"
-          label="Peso recolectado (kg, opcional)"
-          type="number"
-          min="0"
-          step="0.1"
-          placeholder="Ej: 2.5"
-        />
-        <BaseInput
-          v-model="completionNotes"
-          label="Notas (opcional)"
-          placeholder="Observaciones adicionales..."
-        />
-      </div>
-      <template #footer>
-        <BaseButton variant="secondary" @click="showCompleteModal = false">Cancelar</BaseButton>
-        <BaseButton :loading="reportStore.loading" @click="handleComplete">Completar</BaseButton>
-      </template>
-    </BaseModal>
-
-    <BaseModal v-model="showRejectModal" title="Rechazar limpieza">
-      <div class="space-y-4">
-        <p class="text-sm text-gray-600">Indica el motivo del rechazo de la limpieza reportada.</p>
-        <BaseInput
-          v-model="rejectReason"
-          label="Motivo (opcional)"
-          placeholder="Ej: La limpieza no se completó adecuadamente"
-        />
-      </div>
-      <template #footer>
-        <BaseButton variant="secondary" @click="showRejectModal = false">Cancelar</BaseButton>
-        <BaseButton variant="danger" :loading="reportStore.loading" @click="handleReject">Rechazar</BaseButton>
-      </template>
-    </BaseModal>
-
-    <BaseModal v-model="showUnclaimModal" title="Liberar tarea">
-      <div class="space-y-4">
-        <p class="text-gray-700">
-          ¿Estás seguro de liberar esta tarea? El reporte volverá a estado <strong>pendiente</strong>
-          y estará disponible para otros voluntarios.
-        </p>
-      </div>
-      <template #footer>
-        <BaseButton variant="secondary" @click="showUnclaimModal = false">Cancelar</BaseButton>
-        <BaseButton variant="danger" :loading="reportStore.loading" @click="handleUnclaim">Liberar</BaseButton>
-      </template>
-    </BaseModal>
+    <ReportEditModal
+      :show="showEditModal"
+      :report="report"
+      @update:show="showEditModal = $event"
+      @save="handleEdit"
+    />
+    <ReportCompleteModal
+      :show="showCompleteModal"
+      :report="report"
+      @update:show="showCompleteModal = $event"
+      @confirm="handleComplete"
+    />
+    <ReportRejectModal
+      :show="showRejectModal"
+      :report="report"
+      @update:show="showRejectModal = $event"
+      @confirm="handleReject"
+    />
+    <ReportUnclaimModal
+      :show="showUnclaimModal"
+      :report="report"
+      @update:show="showUnclaimModal = $event"
+      @confirm="handleUnclaim"
+    />
   </AppLayout>
 </template>

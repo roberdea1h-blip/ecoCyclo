@@ -29,9 +29,10 @@ function handleConfirm() {
 <template>
   <BaseModal :model-value="show" title="Rechazar limpieza" @update:model-value="emit('update:show', $event)">
     <div class="space-y-4">
-      <p class="text-sm text-gray-600">
-        Reporte: <strong>{{ report?.title }}</strong>
+      <p v-if="report" class="text-sm text-gray-600">
+        Reporte: <strong>{{ report.title }}</strong>
       </p>
+      <p class="text-sm text-gray-600">Indica el motivo del rechazo de la limpieza reportada.</p>
       <BaseInput
         v-model="rejectReason"
         label="Motivo (opcional)"

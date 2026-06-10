@@ -36,8 +36,8 @@ function handleConfirm() {
 <template>
   <BaseModal :model-value="show" title="Completar limpieza" @update:model-value="emit('update:show', $event)">
     <div class="space-y-4">
-      <p class="text-sm text-gray-600">
-        Reporte: <strong>{{ report?.title }}</strong>
+      <p v-if="report" class="text-sm text-gray-600">
+        Reporte: <strong>{{ report.title }}</strong>
       </p>
       <BaseInput
         v-model.number="collectedWeight"

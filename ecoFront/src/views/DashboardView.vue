@@ -18,8 +18,8 @@ import DashboardNotificationsList from '../components/dashboard/DashboardNotific
 import DashboardMyReports from '../components/dashboard/DashboardMyReports.vue'
 import DashboardMapCard from '../components/dashboard/DashboardMapCard.vue'
 import DashboardQuickActions from '../components/dashboard/DashboardQuickActions.vue'
-import DashboardCompleteModal from '../components/dashboard/DashboardCompleteModal.vue'
-import DashboardRejectModal from '../components/dashboard/DashboardRejectModal.vue'
+import ReportCompleteModal from '../components/modals/ReportCompleteModal.vue'
+import ReportRejectModal from '../components/modals/ReportRejectModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -248,13 +248,13 @@ function onMarkerClick(marker: MapMarkerData) {
       <DashboardQuickActions />
     </div>
 
-    <DashboardCompleteModal
+    <ReportCompleteModal
       v-model:show="showCompleteModal"
       :report="completeTarget"
       @confirm="handleComplete"
     />
 
-    <DashboardRejectModal
+    <ReportRejectModal
       v-model:show="showRejectModal"
       :report="rejectTarget"
       @confirm="handleReject"
