@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const _initialized = ref(false)
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => user.value?.role_name === 'admin')
   const userName = computed(() => user.value?.full_name || user.value?.username || '')
   const userPoints = computed(() => user.value?.points ?? 0)
 

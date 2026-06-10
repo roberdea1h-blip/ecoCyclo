@@ -19,8 +19,9 @@ export const registerSchema = z.object({
 export const reportSchema = z.object({
   title: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
   description: z.string().min(10, 'Mínimo 10 caracteres').max(500, 'Máximo 500 caracteres'),
-  waste_type_id: z.number({ required_error: 'Selecciona un tipo de residuo' }),
+  waste_type_id: z.string({ required_error: 'Selecciona un tipo de residuo' }),
   address: z.string().optional(),
+  estimated_quantity: z.number().positive().optional(),
 })
 
 export const profileSchema = z.object({

@@ -31,8 +31,6 @@ const statusColors: Record<string, string> = {
   pending: '#f59e0b',
   in_progress: '#3b82f6',
   cleaned: '#10b981',
-  resolved: '#10b981',
-  rejected: '#ef4444',
   default: '#6b7280',
 }
 

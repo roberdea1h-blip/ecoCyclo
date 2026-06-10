@@ -14,7 +14,7 @@ export const notificationsApi = {
     return api.get<{ count: number }>('/notifications/unread/count')
   },
 
-  markRead(id: number) {
+  markRead(id: string) {
     return api.patch<void>(`/notifications/${id}/read`)
   },
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Reward } from '../types'
 import { rewardsApi } from '../api/rewards'
+import { useAuthStore } from './authStore'
 
 export const useRewardStore = defineStore('reward', () => {
   const rewards = ref<Reward[]>([])
@@ -20,13 +21,15 @@ export const useRewardStore = defineStore('reward', () => {
     }
   }
 
-  async function redeemReward(id: number) {
+  async function redeemReward(id: string) {
     loading.value = true
     error.value = null
     try {
       const result = await rewardsApi.redeem(id)
       const reward = rewards.value.find(r => r.id === id)
       if (reward) reward.stock -= 1
+      const authStore = useAuthStore()
+      await authStore.fetchUser()
       return result
     } catch (e: any) {
       error.value = e.message || 'Error al canjear recompensa'

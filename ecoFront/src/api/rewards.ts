@@ -6,11 +6,11 @@ export const rewardsApi = {
     return api.get<Reward[]>('/rewards')
   },
 
-  get(id: number) {
+  get(id: string) {
     return api.get<Reward>(`/rewards/${id}`)
   },
 
-  redeem(id: number) {
-    return api.post<{ message: string }>(`/rewards/${id}/redeem`)
+  redeem(id: string) {
+    return api.post<{ id: string }>(`/rewards/${id}/redeem`)
   },
 }

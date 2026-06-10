@@ -2,12 +2,12 @@ import { api } from './http'
 import type { Report, ReportCreate, ReportUpdate } from '../types'
 
 export const reportsApi = {
-  list(params?: { skip?: number; limit?: number; status?: string; waste_type_id?: number }) {
+  list(params?: { skip?: number; limit?: number; status?: string; waste_type_id?: string }) {
     const searchParams = new URLSearchParams()
     if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
     if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.status) searchParams.set('status', params.status)
-    if (params?.waste_type_id) searchParams.set('waste_type_id', String(params.waste_type_id))
+    if (params?.waste_type_id) searchParams.set('waste_type_id', params.waste_type_id)
     const qs = searchParams.toString()
     return api.get<Report[]>(`/reports${qs ? `?${qs}` : ''}`)
   },
@@ -20,27 +20,34 @@ export const reportsApi = {
     return api.get<Report[]>(`/reports/mine${qs ? `?${qs}` : ''}`)
   },
 
-  get(id: number) {
+  get(id: string) {
     return api.get<Report>(`/reports/${id}`)
   },
 
   create(data: ReportCreate) {
-    const formData = new FormData()
-    formData.append('title', data.title)
-    formData.append('description', data.description)
-    formData.append('latitude', String(data.latitude))
-    formData.append('longitude', String(data.longitude))
-    formData.append('waste_type_id', String(data.waste_type_id))
-    if (data.address) formData.append('address', data.address)
-    if (data.image) formData.append('image', data.image)
-    return api.postForm<Report>('/reports', formData)
+    return api.post<Report>('/reports', data)
   },
 
-  update(id: number, data: ReportUpdate) {
+  uploadImage(id: string, file: File, isBefore = true) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('is_before', String(isBefore))
+    return api.postForm<{ id: string; image_url: string }>(`/reports/${id}/images`, formData)
+  },
+
+  claim(id: string) {
+    return api.post<Report>(`/reports/${id}/claim`)
+  },
+
+  complete(id: string, data: { collected_weight?: number; notes?: string }) {
+    return api.post<Report>(`/reports/${id}/complete`, data)
+  },
+
+  update(id: string, data: ReportUpdate) {
     return api.patch<Report>(`/reports/${id}`, data)
   },
 
-  delete(id: number) {
+  delete(id: string) {
     return api.delete<void>(`/reports/${id}`)
   },
 }

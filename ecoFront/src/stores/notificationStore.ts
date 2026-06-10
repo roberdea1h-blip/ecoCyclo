@@ -30,7 +30,7 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  async function markAsRead(id: number) {
+  async function markAsRead(id: string) {
     try {
       await notificationsApi.markRead(id)
       const notif = notifications.value.find(n => n.id === id)
