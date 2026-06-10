@@ -47,8 +47,8 @@ async def refresh(
 ):
     raw_refresh_token = request.cookies.get("refresh_token")
     if not raw_refresh_token:
-        from app.utils.exceptions import InvalidToken
-        raise InvalidToken()
+        from app.refresh_token.exceptions import RefreshTokenNotFoundException
+        raise RefreshTokenNotFoundException()
 
     access_token, new_refresh_token = await auth_service.refresh(db, raw_refresh_token)
     set_auth_cookies(response, access_token, new_refresh_token)

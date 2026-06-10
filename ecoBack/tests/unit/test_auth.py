@@ -64,10 +64,10 @@ class TestAuthRegister:
             response = await client.post("/api/v1/auth/register", json=payload)
 
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"] == "Email already registered"
+        assert response.json()["error_code"] == "email_already_exists"
 
     async def test_register_username_already_exists_returns_409(self, client):
-        from app.utils.exceptions import UsernameAlreadyRegistered
+        from app.users.exceptions import UsernameAlreadyExistsException
 
         payload = {
             "email": "new@example.com",
@@ -76,11 +76,11 @@ class TestAuthRegister:
             "full_name": "New User",
         }
 
-        with patch.object(auth_service, "register", new=AsyncMock(side_effect=UsernameAlreadyRegistered())):
+        with patch.object(auth_service, "register", new=AsyncMock(side_effect=UsernameAlreadyExistsException())):
             response = await client.post("/api/v1/auth/register", json=payload)
 
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"] == "Username already taken"
+        assert response.json()["error_code"] == "username_already_exists"
 
 
 class TestAuthLogin:

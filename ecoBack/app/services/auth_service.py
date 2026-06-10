@@ -15,14 +15,15 @@ from app.core.security import (
 )
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.refresh_token.exceptions import RefreshTokenNotFoundException
 from app.repositories.user_repository import user_repository
 from app.schemas.auth import RegisterRequest
-from app.utils.exceptions import (
-    CredentialsException,
-    EmailAlreadyRegistered,
-    InvalidToken,
+from app.users.exceptions import (
+    EmailAlreadyExistsException,
+    InvalidCredentialsException,
+    InvalidRoleException,
     UserNotFoundException,
-    UsernameAlreadyRegistered,
+    UsernameAlreadyExistsException,
 )
 
 settings = get_settings()
@@ -32,15 +33,15 @@ class AuthService:
     async def register(self, db: AsyncSession, request: RegisterRequest) -> User:
         existing_email = await user_repository.get_by_email(db, request.email)
         if existing_email:
-            raise EmailAlreadyRegistered()
+            raise EmailAlreadyExistsException()
 
         existing_username = await user_repository.get_by_username(db, request.username)
         if existing_username:
-            raise UsernameAlreadyRegistered()
+            raise UsernameAlreadyExistsException()
 
         user_role = await user_repository.get_user_role(db)
         if user_role is None:
-            raise ValueError("Default user role not found. Run init_db first.")
+            raise InvalidRoleException("user")
 
         user = await user_repository.create(
             db,
@@ -57,7 +58,7 @@ class AuthService:
     async def login(self, db: AsyncSession, email: str, password: str) -> tuple[str, str, User]:
         user = await user_repository.get_by_email(db, email)
         if user is None or not verify_password(password, user.hashed_password):
-            raise CredentialsException()
+            raise InvalidCredentialsException()
 
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token_str = create_refresh_token(data={"sub": str(user.id)})
@@ -77,15 +78,15 @@ class AuthService:
         )
         stored_token = result.scalar_one_or_none()
         if stored_token is None:
-            raise InvalidToken()
+            raise RefreshTokenNotFoundException()
 
         payload = decode_token(raw_refresh_token)
         if payload is None or payload.get("type") != "refresh":
-            raise InvalidToken()
+            raise RefreshTokenNotFoundException()
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise InvalidToken()
+            raise RefreshTokenNotFoundException()
 
         stored_token.is_revoked = True
         await db.flush()
@@ -125,7 +126,7 @@ class AuthService:
     async def get_current_user(self, db: AsyncSession, user_id: uuid.UUID) -> User:
         user = await user_repository.get_with_role(db, user_id)
         if user is None or not user.is_active:
-            raise UserNotFoundException()
+            raise UserNotFoundException(user_id)
         return user
 
 

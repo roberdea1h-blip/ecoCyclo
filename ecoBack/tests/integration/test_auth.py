@@ -43,7 +43,7 @@ class TestAuthRegisterIntegration:
             response = await client.post("/api/v1/auth/register", json=payload)
 
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"] == "Email already registered"
+        assert response.json()["error_code"] == "email_already_exists"
 
     async def test_register_missing_fields(self, client):
         response = await client.post("/api/v1/auth/register", json={"email": "bad@example.com"})
@@ -88,7 +88,7 @@ class TestAuthLoginIntegration:
             response = await client.post("/api/v1/auth/login", json={"email": "wrong@b.com", "password": "wrongpass"})
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "Incorrect email or password" in response.json()["detail"]
+        assert response.json()["error_code"] == "invalid_credentials"
 
     async def test_login_short_password(self, client):
         response = await client.post("/api/v1/auth/login", json={"email": "a@b.com", "password": "12345"})

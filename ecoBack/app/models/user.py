@@ -29,10 +29,10 @@ class User(Base):
     @property
     def role_name(self) -> str | None:
         return self.role.name if self.role else None
-    reports: Mapped[list["Report"]] = relationship("Report", back_populates="user", foreign_keys="Report.user_id")  # noqa: F821
-    cleanup_records: Mapped[list["CleanupRecord"]] = relationship("CleanupRecord", back_populates="user")  # noqa: F821
-    redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="user")  # noqa: F821
-    point_transactions: Mapped[list["PointTransaction"]] = relationship("PointTransaction", back_populates="user")  # noqa: F821
-    notifications: Mapped[list["Notification"]] = relationship("Notification", back_populates="user")  # noqa: F821
+    reports: Mapped[list["Report"]] = relationship("Report", back_populates="user", foreign_keys="Report.user_id", cascade="all, delete-orphan")  # noqa: F821
+    cleanup_records: Mapped[list["CleanupRecord"]] = relationship("CleanupRecord", back_populates="user", cascade="all, delete-orphan")  # noqa: F821
+    redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="user", cascade="all, delete-orphan")  # noqa: F821
+    point_transactions: Mapped[list["PointTransaction"]] = relationship("PointTransaction", back_populates="user", cascade="all, delete-orphan")  # noqa: F821
+    notifications: Mapped[list["Notification"]] = relationship("Notification", back_populates="user", cascade="all, delete-orphan")  # noqa: F821
     action_logs: Mapped[list["ActionLog"]] = relationship("ActionLog", back_populates="user")  # noqa: F821
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")  # noqa: F821

@@ -83,7 +83,7 @@ class TestUsersGetById:
             response = await client.get(f"/api/v1/users/{user_id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "User not found"
+        assert response.json()["error_code"] == "user_not_found"
 
     async def test_get_user_invalid_uuid_returns_422(self, client, auth_headers):
         response = await client.get("/api/v1/users/not-a-uuid", headers=auth_headers)
