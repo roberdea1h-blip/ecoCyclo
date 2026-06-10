@@ -4,3 +4,6 @@ AGENTS.md
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+ecoBack/**/__pycache__/
+*.pyc
