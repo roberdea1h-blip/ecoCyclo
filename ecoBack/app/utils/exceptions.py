@@ -72,3 +72,43 @@ class InsufficientPointsException(HTTPException):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Insufficient points",
         )
+
+
+class ReportNotPendingException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El reporte no está pendiente",
+        )
+
+
+class CannotClaimOwnReportException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes reclamar tu propio reporte",
+        )
+
+
+class ReportNotInProgressException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El reporte no está en progreso",
+        )
+
+
+class NotAssignedCleanerException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No eres el limpiador asignado a este reporte",
+        )
+
+
+class WasteTypeNotFoundException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tipo de residuo no encontrado",
+        )

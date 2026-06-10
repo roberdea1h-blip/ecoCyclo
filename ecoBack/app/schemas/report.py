@@ -13,6 +13,7 @@ class ReportCreate(BaseModel):
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     address: str | None = Field(None, max_length=500)
+    estimated_quantity: float | None = None
 
 
 class ReportUpdate(BaseModel):
@@ -33,10 +34,21 @@ class ReportResponse(BaseModel):
     latitude: float
     longitude: float
     address: str | None
+    estimated_quantity: float | None
     status: ReportStatus
+    cleaner_id: UUID | None
     cleaned_at: datetime | None
+    cleaner_name: str | None = None
+    waste_type_name: str | None = None
+    user_name: str | None = None
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class CompleteReportRequest(BaseModel):
+    collected_weight: float | None = None
+    notes: str | None = None
 
 
 class ReportFilters(BaseModel):
