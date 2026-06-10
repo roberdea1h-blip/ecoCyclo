@@ -121,8 +121,8 @@ function onMarkerClick(marker: MapMarkerData) {
               <IconReport class="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p class="text-sm text-gray-500">Limpiados</p>
-              <p class="text-xl font-bold text-gray-900">{{ reportStore.cleanedCount }}</p>
+              <p class="text-sm text-gray-500">Verificados</p>
+              <p class="text-xl font-bold text-gray-900">{{ reportStore.cleanedCount + reportStore.verifiedCount }}</p>
             </div>
           </div>
         </BaseCard>
@@ -242,7 +242,7 @@ function onMarkerClick(marker: MapMarkerData) {
                   <p class="text-sm font-medium text-gray-900 truncate">{{ report.title }}</p>
                   <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(report.created_at) }}</p>
                 </div>
-                <BaseBadge :variant="report.status === 'cleaned' ? 'success' : report.status === 'pending' ? 'warning' : 'info'" size="sm">
+                <BaseBadge :variant="report.status === 'verified' || report.status === 'cleaned' ? 'success' : report.status === 'rejected' ? 'danger' : report.status === 'pending' || report.status === 'pending_review' ? 'warning' : 'info'" size="sm">
                   {{ getStatusLabel(report.status) }}
                 </BaseBadge>
               </div>
