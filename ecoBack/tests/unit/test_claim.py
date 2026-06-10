@@ -33,7 +33,7 @@ class TestReportsClaim:
             response = await client.post(f"/api/v1/reports/{report_id}/claim", headers=auth_headers)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "Report not found"
+        assert response.json()["error_code"] == "report_not_found"
 
     async def test_claim_not_pending_returns_400(self, client, auth_headers, mock_report):
         report_id = str(mock_report.id)

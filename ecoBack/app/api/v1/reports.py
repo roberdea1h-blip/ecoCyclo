@@ -70,6 +70,17 @@ async def my_reports(
     return reports
 
 
+@router.get("/claimed", response_model=list[ReportResponse])
+async def claimed_reports(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reports = await report_service.get_claimed_reports(db, current_user.id, skip=skip, limit=limit)
+    return reports
+
+
 @router.post("/{report_id}/images", response_model=ReportImageResponse, status_code=status.HTTP_201_CREATED)
 async def upload_report_image(
     report_id: UUID,
@@ -91,6 +102,16 @@ async def claim_report(
     current_user: User = Depends(get_current_user),
 ):
     report = await report_service.claim_report(db, report_id, current_user.id)
+    return report
+
+
+@router.post("/{report_id}/unclaim", response_model=ReportResponse)
+async def unclaim_report(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = await report_service.unclaim_report(db, report_id, current_user.id)
     return report
 
 

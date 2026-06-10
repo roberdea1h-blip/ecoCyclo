@@ -42,6 +42,7 @@ class ReportResponse(BaseModel):
     validated_at: datetime | None = None
     validator_id: UUID | None = None
     cleaner_name: str | None = None
+    validator_name: str | None = None
     waste_type_name: str | None = None
     user_name: str | None = None
     image_url: str | None = None

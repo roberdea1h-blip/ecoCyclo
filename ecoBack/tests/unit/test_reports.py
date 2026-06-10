@@ -135,7 +135,7 @@ class TestReportsGetById:
             response = await client.get(f"/api/v1/reports/{report_id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "Report not found"
+        assert response.json()["error_code"] == "report_not_found"
 
     async def test_get_report_invalid_uuid_returns_422(self, client, auth_headers):
         response = await client.get("/api/v1/reports/not-a-uuid", headers=auth_headers)

@@ -6,6 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.report import Report, ReportStatus
 from app.models.report_image import ReportImage
+from app.report.exceptions import (
+    CannotClaimOwnReportException,
+    NotAssignedCleanerException,
+    NotOriginalReporterException,
+    ReportNotFoundException,
+    ReportNotInProgressException,
+    ReportNotPendingException,
+    ReportNotPendingReviewException,
+)
 from app.repositories.point_transaction_repository import point_transaction_repository
 from app.repositories.report_image_repository import report_image_repository
 from app.repositories.report_repository import report_repository
@@ -16,16 +25,6 @@ from app.schemas.report import ReportCreate, ReportUpdate
 from app.services.action_log_service import action_log_service
 from app.services.notification_service import notification_service
 from app.models.user import User
-from app.utils.exceptions import (
-    CannotClaimOwnReportException,
-    ForbiddenException,
-    NotAssignedCleanerException,
-    NotOriginalReporterException,
-    ReportNotFoundException,
-    ReportNotInProgressException,
-    ReportNotPendingException,
-    ReportNotPendingReviewException,
-)
 
 
 def _haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -79,13 +78,18 @@ class ReportService:
     async def get_report(self, db: AsyncSession, report_id: UUID) -> Report:
         report = await report_repository.get_with_images(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         return report
 
     async def get_user_reports(
         self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
     ) -> list[Report]:
         return await report_repository.get_by_user(db, user_id, skip=skip, limit=limit)
+
+    async def get_claimed_reports(
+        self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
+    ) -> list[Report]:
+        return await report_repository.get_by_cleaner(db, user_id, skip=skip, limit=limit)
 
     async def get_all_reports(
         self, db: AsyncSession, skip: int = 0, limit: int = 100
@@ -125,9 +129,10 @@ class ReportService:
     ) -> Report:
         report = await report_repository.get(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.user_id != current_user.id and current_user.role_name != "admin":
-            raise ForbiddenException()
+            from app.core.exceptions import ForbiddenException
+            raise ForbiddenException(message="Not enough permissions")
 
         update_kwargs = data.model_dump(exclude_unset=True)
         if update_kwargs:
@@ -144,15 +149,16 @@ class ReportService:
     async def delete_report(self, db: AsyncSession, report_id: UUID, current_user: User) -> None:
         report = await report_repository.get(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.user_id != current_user.id and current_user.role_name != "admin":
-            raise ForbiddenException()
+            from app.core.exceptions import ForbiddenException
+            raise ForbiddenException(message="Not enough permissions")
         await report_repository.delete(db, report_id)
 
     async def claim_report(self, db: AsyncSession, report_id: UUID, user_id: UUID) -> Report:
         report = await report_repository.get(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.status != ReportStatus.pending:
             raise ReportNotPendingException()
         if report.user_id == user_id:
@@ -182,13 +188,44 @@ class ReportService:
         )
         return report
 
+    async def unclaim_report(self, db: AsyncSession, report_id: UUID, user_id: UUID) -> Report:
+        report = await report_repository.get(db, report_id)
+        if report is None:
+            raise ReportNotFoundException(report_id)
+        if report.cleaner_id != user_id:
+            raise NotAssignedCleanerException()
+        if report.status != ReportStatus.in_progress:
+            raise ReportNotInProgressException()
+
+        report = await report_repository.update(
+            db, report, cleaner_id=None, status=ReportStatus.pending,
+        )
+        report = await self._load_relations(db, report)
+
+        cleaner = await user_repository.get(db, user_id)
+
+        await notification_service.create_notification(
+            db, report.user_id,
+            NotificationCreate(
+                title="Tarea liberada",
+                message=f"{cleaner.full_name if cleaner else 'Un voluntario'} ha liberado la tarea: {report.title}. Está disponible para otros voluntarios.",
+                type="task_unclaimed",
+            ),
+        )
+        await action_log_service.log(
+            db, user_id=user_id, action="report.unclaim",
+            entity_type="report", entity_id=str(report_id),
+            description=f"Reporte liberado: {report.title}",
+        )
+        return report
+
     async def complete_report(
         self, db: AsyncSession, report_id: UUID, user_id: UUID,
         collected_weight: float | None = None, notes: str | None = None,
     ) -> Report:
         report = await report_repository.get_with_images(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.cleaner_id != user_id:
             raise NotAssignedCleanerException()
         if report.status != ReportStatus.in_progress:
@@ -239,7 +276,7 @@ class ReportService:
     ) -> Report:
         report = await report_repository.get_with_images(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.user_id != current_user.id and current_user.role_name != "admin":
             raise NotOriginalReporterException()
         if report.status != ReportStatus.pending_review:
@@ -301,7 +338,7 @@ class ReportService:
     ) -> Report:
         report = await report_repository.get_with_images(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         if report.user_id != current_user.id and current_user.role_name != "admin":
             raise NotOriginalReporterException()
         if report.status != ReportStatus.pending_review:
@@ -338,7 +375,7 @@ class ReportService:
     ) -> ReportImage:
         report = await report_repository.get(db, report_id)
         if report is None:
-            raise ReportNotFoundException()
+            raise ReportNotFoundException(report_id)
         image = await report_image_repository.create(
             db, report_id=report_id, image_url=image_url, is_before=is_before,
         )

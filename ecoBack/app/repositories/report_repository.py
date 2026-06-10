@@ -15,8 +15,20 @@ class ReportRepository(BaseRepository[Report]):
             selectinload(Report.waste_type),
             selectinload(Report.user),
             selectinload(Report.cleaner),
+            selectinload(Report.validator),
             selectinload(Report.images),
         )
+
+    async def get_by_cleaner(self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100) -> list[Report]:
+        stmt = self._with_relations(
+            select(Report)
+            .where(Report.cleaner_id == user_id)
+            .offset(skip)
+            .limit(limit)
+            .order_by(Report.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_by_user(self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100) -> list[Report]:
         stmt = self._with_relations(

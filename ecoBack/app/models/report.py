@@ -66,6 +66,10 @@ class Report(Base):
         return self.cleaner.full_name if self.cleaner else None
 
     @property
+    def validator_name(self) -> str | None:
+        return self.validator.full_name if self.validator else None
+
+    @property
     def image_url(self) -> str | None:
         if self.images:
             for img in self.images:
