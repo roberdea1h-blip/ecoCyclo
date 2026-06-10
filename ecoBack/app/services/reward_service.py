@@ -7,15 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.point_transaction import PointTransaction, PointTransactionType
 from app.models.redemption import Redemption, RedemptionStatus
 from app.models.reward import Reward
+from app.redemption.exceptions import (
+    RedemptionNotFoundException,
+    RewardOutOfStockException,
+)
 from app.repositories.redemption_repository import redemption_repository
 from app.repositories.reward_repository import reward_repository
 from app.repositories.user_repository import user_repository
+from app.reward.exceptions import RewardNotFoundException
+from app.point_transaction.exceptions import InsufficientPointsException
 from app.schemas.reward import RewardCreate, RewardUpdate
-from app.utils.exceptions import (
-    InsufficientPointsException,
-    RewardNotFoundException,
-    RewardOutOfStockException,
-)
 
 
 class RewardService:
@@ -118,7 +119,6 @@ class RewardService:
     ) -> Redemption:
         redemption = await redemption_repository.get(db, redemption_id)
         if redemption is None:
-            from app.utils.exceptions import RedemptionNotFoundException
             raise RedemptionNotFoundException()
 
         update_kwargs = {"status": status}

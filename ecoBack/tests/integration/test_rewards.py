@@ -80,7 +80,7 @@ class TestRewardsRedeemIntegration:
         with patch.object(reward_service, "redeem_reward", side_effect=RewardOutOfStockException()):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_409_CONFLICT
 
     async def test_redeem_insufficient_points(self, client, auth_headers, mock_reward):
         from app.utils.exceptions import InsufficientPointsException
@@ -90,7 +90,7 @@ class TestRewardsRedeemIntegration:
         with patch.object(reward_service, "redeem_reward", side_effect=InsufficientPointsException()):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_409_CONFLICT
 
     async def test_redeem_no_auth(self, unauth_client, mock_reward):
         reward_id = str(mock_reward.id)

@@ -62,7 +62,7 @@ class TestRewardsGet:
             response = await client.get(f"/api/v1/rewards/{reward_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "Reward not found"
+        assert response.json()["error_code"] == "reward_not_found"
 
     async def test_get_reward_invalid_uuid_returns_422(self, client):
         response = await client.get("/api/v1/rewards/not-a-uuid")
@@ -88,23 +88,23 @@ class TestRewardsRedeem:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    async def test_redeem_reward_out_of_stock_returns_400(self, client, auth_headers, mock_reward):
+    async def test_redeem_reward_out_of_stock_returns_409(self, client, auth_headers, mock_reward):
         reward_id = str(mock_reward.id)
 
         with patch.object(reward_service, "redeem_reward", new=AsyncMock(side_effect=RewardOutOfStockException())):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json()["detail"] == "Reward is out of stock"
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.json()["error_code"] == "reward_out_of_stock"
 
-    async def test_redeem_reward_insufficient_points_returns_400(self, client, auth_headers, mock_reward):
+    async def test_redeem_reward_insufficient_points_returns_409(self, client, auth_headers, mock_reward):
         reward_id = str(mock_reward.id)
 
         with patch.object(reward_service, "redeem_reward", new=AsyncMock(side_effect=InsufficientPointsException())):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json()["detail"] == "Insufficient points"
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.json()["error_code"] == "insufficient_points"
 
     async def test_redeem_reward_without_auth_returns_401(self, unauth_client, mock_reward):
         reward_id = str(mock_reward.id)
