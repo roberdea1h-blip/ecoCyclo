@@ -192,7 +192,7 @@ class ReportService:
         report = await report_repository.get(db, report_id)
         if report is None:
             raise ReportNotFoundException(report_id)
-        if report.cleaner_id != user_id:
+        if report.cleaner_id != user_id and report.user_id != user_id:
             raise NotAssignedCleanerException()
         if report.status != ReportStatus.in_progress:
             raise ReportNotInProgressException()
