@@ -26,6 +26,12 @@ class NotificationRepository(BaseRepository[Notification]):
         )
         return list(result.scalars().all())
 
+    async def get_by_user_and_id(self, db: AsyncSession, notification_id: UUID) -> Notification | None:
+        result = await db.execute(
+            select(Notification).where(Notification.id == notification_id)
+        )
+        return result.scalar_one_or_none()
+
     async def mark_as_read(self, db: AsyncSession, notification_id: UUID) -> None:
         await db.execute(
             update(Notification)

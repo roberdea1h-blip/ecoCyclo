@@ -46,7 +46,7 @@ async def mark_as_read(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await notification_service.mark_as_read(db, notification_id)
+    await notification_service.mark_as_read(db, notification_id, user_id=current_user.id)
     return MessageResponse(message="Notification marked as read")
 
 

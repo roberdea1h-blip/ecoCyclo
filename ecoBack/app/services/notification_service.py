@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
+from app.notification.exceptions import NotificationNotFoundException
 from app.repositories.notification_repository import notification_repository
 from app.schemas.notification import NotificationCreate
 
@@ -30,7 +31,15 @@ class NotificationService:
     async def get_unread(self, db: AsyncSession, user_id: UUID) -> list[Notification]:
         return await notification_repository.get_unread_by_user(db, user_id)
 
-    async def mark_as_read(self, db: AsyncSession, notification_id: UUID) -> None:
+    async def mark_as_read(self, db: AsyncSession, notification_id: UUID, user_id: UUID | None = None) -> None:
+        if user_id:
+            notification = await notification_repository.get_by_user_and_id(db, notification_id)
+            if notification is None or notification.user_id != user_id:
+                raise NotificationNotFoundException()
+        else:
+            notification = await notification_repository.get(db, notification_id)
+            if notification is None:
+                raise NotificationNotFoundException()
         await notification_repository.mark_as_read(db, notification_id)
 
     async def mark_all_as_read(self, db: AsyncSession, user_id: UUID) -> None:
