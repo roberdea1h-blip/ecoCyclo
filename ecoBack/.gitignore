@@ -14,3 +14,10 @@ app/utils/__pycache__/
 tests/__pycache__/
 
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest
+.pytest_cache/  
