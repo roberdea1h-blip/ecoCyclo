@@ -5,14 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_admin_user
 from app.db.session import get_db
+from app.mappers.user_mapper import to_user_response
 from app.models.user import User
 from app.schemas.common import MessageResponse
 from app.schemas.report import ReportResponse
 from app.schemas.reward import RewardCreate, RewardResponse
 from app.schemas.user import UserResponse
+from app.schemas.waste_type import WasteTypeCreate, WasteTypeResponse, WasteTypeUpdate
 from app.services.report_service import report_service
 from app.services.reward_service import reward_service
 from app.services.user_service import user_service
+from app.services.waste_type_service import waste_type_service
 from app.storage import get_image_storage, ImageStorage
 
 router = APIRouter()
@@ -32,7 +35,7 @@ async def list_users(
 ):
     from app.repositories.user_repository import user_repository
     users = await user_repository.get_multi(db, skip=skip, limit=limit)
-    return users
+    return [to_user_response(u) for u in users]
 
 
 @router.get("/reports", response_model=list[ReportResponse])
@@ -77,3 +80,39 @@ async def setup_database(
     from app.db.init_db import init_db
     await init_db(db)
     return MessageResponse(message="Database initialized successfully")
+
+
+@router.get("/waste-types", response_model=list[WasteTypeResponse])
+async def list_waste_types(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await waste_type_service.get_all(db)
+
+
+@router.post("/waste-types", response_model=WasteTypeResponse, status_code=status.HTTP_201_CREATED)
+async def create_waste_type(
+    data: WasteTypeCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await waste_type_service.create(db, data)
+
+
+@router.patch("/waste-types/{waste_type_id}", response_model=WasteTypeResponse)
+async def update_waste_type(
+    waste_type_id: UUID,
+    data: WasteTypeUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await waste_type_service.update(db, waste_type_id, data)
+
+
+@router.delete("/waste-types/{waste_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_waste_type(
+    waste_type_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    await waste_type_service.delete(db, waste_type_id)

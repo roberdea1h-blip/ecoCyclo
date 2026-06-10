@@ -8,7 +8,7 @@ from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.report import ReportStatus
 from app.models.user import User
-from app.schemas.report import ReportCreate, ReportImageResponse, ReportResponse, ReportUpdate
+from app.schemas.report import CompleteReportRequest, ReportCreate, ReportImageResponse, ReportResponse, ReportUpdate
 from app.services.report_service import report_service
 from app.storage import get_image_storage, ImageStorage
 
@@ -82,6 +82,31 @@ async def upload_report_image(
     image_url = await storage.save(file, subfolder="reports")
     image = await report_service.add_image(db, report_id, image_url, is_before=is_before)
     return image
+
+
+@router.post("/{report_id}/claim", response_model=ReportResponse)
+async def claim_report(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = await report_service.claim_report(db, report_id, current_user.id)
+    return report
+
+
+@router.post("/{report_id}/complete", response_model=ReportResponse)
+async def complete_report(
+    report_id: UUID,
+    body: CompleteReportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = await report_service.complete_report(
+        db, report_id, current_user.id,
+        collected_weight=body.collected_weight,
+        notes=body.notes,
+    )
+    return report
 
 
 @router.get("/{report_id}", response_model=ReportResponse)

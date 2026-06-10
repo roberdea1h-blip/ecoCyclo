@@ -34,12 +34,36 @@ class Report(Base):
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    estimated_quantity: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[ReportStatus] = mapped_column(SAEnum(ReportStatus), default=ReportStatus.pending)
+    cleaner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     cleaned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user: Mapped["User"] = relationship("User", back_populates="reports")  # noqa: F821
+    user: Mapped["User"] = relationship("User", back_populates="reports", foreign_keys=[user_id])  # noqa: F821
+    cleaner: Mapped["User | None"] = relationship("User", foreign_keys=[cleaner_id])  # noqa: F821
     waste_type: Mapped["WasteType"] = relationship("WasteType", back_populates="reports")  # noqa: F821
     images: Mapped[list["ReportImage"]] = relationship("ReportImage", back_populates="report", cascade="all, delete-orphan")  # noqa: F821
     cleanup_records: Mapped[list["CleanupRecord"]] = relationship("CleanupRecord", back_populates="report", cascade="all, delete-orphan")  # noqa: F821
+
+    @property
+    def waste_type_name(self) -> str | None:
+        return self.waste_type.name if self.waste_type else None
+
+    @property
+    def user_name(self) -> str | None:
+        return self.user.full_name if self.user else None
+
+    @property
+    def cleaner_name(self) -> str | None:
+        return self.cleaner.full_name if self.cleaner else None
+
+    @property
+    def image_url(self) -> str | None:
+        if self.images:
+            for img in self.images:
+                if img.is_before:
+                    return img.image_url
+            return self.images[0].image_url
+        return None
