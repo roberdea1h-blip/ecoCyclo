@@ -9,7 +9,7 @@ from app.mappers.user_mapper import to_user_response
 from app.models.user import User
 from app.schemas.common import MessageResponse
 from app.schemas.report import ReportResponse
-from app.schemas.reward import RewardCreate, RewardResponse
+from app.schemas.reward import RedemptionResponse, RewardCreate, RewardResponse, RewardUpdate, UpdateRedemptionStatusRequest
 from app.schemas.user import UserResponse
 from app.schemas.waste_type import WasteTypeCreate, WasteTypeResponse, WasteTypeUpdate
 from app.services.report_service import report_service
@@ -57,6 +57,25 @@ async def create_reward(
 ):
     reward = await reward_service.create_reward(db, data)
     return reward
+
+
+@router.patch("/rewards/{reward_id}", response_model=RewardResponse)
+async def update_reward(
+    reward_id: UUID,
+    data: RewardUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await reward_service.update_reward(db, reward_id, data)
+
+
+@router.delete("/rewards/{reward_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reward(
+    reward_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    await reward_service.delete_reward(db, reward_id)
 
 
 @router.post("/rewards/{reward_id}/image", response_model=RewardResponse)
@@ -109,6 +128,15 @@ async def update_waste_type(
     return await waste_type_service.update(db, waste_type_id, data)
 
 
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    await user_service.delete_user(db, user_id, current_user.id)
+
+
 @router.delete("/waste-types/{waste_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_waste_type(
     waste_type_id: UUID,
@@ -116,3 +144,25 @@ async def delete_waste_type(
     current_user: User = Depends(get_current_admin_user),
 ):
     await waste_type_service.delete(db, waste_type_id)
+
+
+@router.get("/redemptions", response_model=list[RedemptionResponse])
+async def list_redemptions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await reward_service.get_redemptions(db, skip=skip, limit=limit)
+
+
+@router.patch("/redemptions/{redemption_id}/status", response_model=RedemptionResponse)
+async def update_redemption_status(
+    redemption_id: UUID,
+    body: UpdateRedemptionStatusRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    return await reward_service.update_redemption_status(
+        db, redemption_id, body.status, delivery_info=body.delivery_info,
+    )
