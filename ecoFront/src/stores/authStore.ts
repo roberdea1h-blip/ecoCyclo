@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '../types'
 import { authApi } from '../api/auth'
+import { isApiError } from '../types/api-error'
+import { useApiError } from '../composables/useApiError'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -13,6 +15,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => user.value?.role_name === 'admin')
   const userName = computed(() => user.value?.full_name || user.value?.username || '')
   const userPoints = computed(() => user.value?.points ?? 0)
+
+  const { handleError, clearError } = useApiError()
 
   function clearUser() {
     user.value = null
@@ -26,12 +30,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string) {
     loading.value = true
-    error.value = null
+    clearError()
     try {
       await authApi.login({ email, password })
       await fetchUser()
-    } catch (e: any) {
-      error.value = e.message || 'Error al iniciar sesión'
+    } catch (e: unknown) {
+      if (isApiError(e)) {
+        if (e.error_code === 'invalid_credentials') {
+          error.value = 'Correo o contraseña incorrectos.'
+        } else {
+          error.value = handleError(e)
+        }
+      } else {
+        error.value = 'Error inesperado. Intenta de nuevo.'
+      }
       throw e
     } finally {
       loading.value = false
@@ -40,13 +52,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(email: string, password: string, full_name: string, username: string) {
     loading.value = true
-    error.value = null
+    clearError()
     try {
       await authApi.register({ email, password, full_name, username })
       await authApi.login({ email, password })
       await fetchUser()
-    } catch (e: any) {
-      error.value = e.message || 'Error al registrarse'
+    } catch (e: unknown) {
+      error.value = handleError(e)
       throw e
     } finally {
       loading.value = false

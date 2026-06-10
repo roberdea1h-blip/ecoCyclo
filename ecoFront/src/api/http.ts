@@ -1,15 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+import type { ApiError } from '../types/api-error'
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public data?: unknown
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 async function refreshAccessToken(): Promise<boolean> {
   try {
@@ -20,6 +11,23 @@ async function refreshAccessToken(): Promise<boolean> {
     return res.ok
   } catch {
     return false
+  }
+}
+
+function parseApiError(data: unknown): ApiError {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'error_code' in data &&
+    'message' in data
+  ) {
+    return data as ApiError
+  }
+  const d = data as Record<string, unknown> | null
+  return {
+    error_code: 'unknown_error',
+    message: (d?.detail as string) || (d?.message as string) || 'Error inesperado',
+    details: d,
   }
 }
 
@@ -51,22 +59,40 @@ async function request<T>(
       const { useAuthStore } = await import('../stores/authStore')
       const authStore = useAuthStore()
       authStore.clearUser()
-      throw new ApiError(401, 'Sesión expirada')
+      const error: ApiError = {
+        error_code: 'session_expired',
+        message: 'Sesión expirada',
+      }
+      throw error
     }
   }
 
   if (!res.ok) {
-    let errorData: { detail?: string; message?: string } | null = null
+    let errorData: ApiError | null = null
     try {
-      errorData = await res.json()
+      const json = await res.json()
+      errorData = parseApiError(json)
     } catch {
       errorData = null
     }
-    throw new ApiError(
-      res.status,
-      errorData?.detail || errorData?.message || res.statusText,
-      errorData
-    )
+
+    if (
+      errorData &&
+      (errorData.error_code === 'refresh_token_expired' ||
+        errorData.error_code === 'refresh_token_revoked')
+    ) {
+      const { useAuthStore } = await import('../stores/authStore')
+      const authStore = useAuthStore()
+      await authStore.logout()
+      const { useRouter } = await import('vue-router')
+      const router = useRouter()
+      router.push('/login')
+    }
+
+    throw errorData || {
+      error_code: 'unknown_error',
+      message: res.statusText || 'Error inesperado',
+    }
   }
 
   if (res.status === 204) {

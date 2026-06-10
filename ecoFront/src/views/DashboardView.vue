@@ -12,7 +12,9 @@ import AppLayout from '../components/shared/AppLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseButton from '../components/base/BaseButton.vue'
+import BaseInput from '../components/base/BaseInput.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
+import BaseModal from '../components/base/BaseModal.vue'
 import MapView from '../components/maps/MapView.vue'
 import IconGift from '../components/icons/IconGift.vue'
 import IconReport from '../components/icons/IconReport.vue'
@@ -28,12 +30,27 @@ const notificationStore = useNotificationStore()
 
 const availableReports = ref<Report[]>([])
 const loadingAvailable = ref(false)
+const claimedReports = ref<Report[]>([])
+const loadingClaimed = ref(false)
+const pendingReviewReports = ref<Report[]>([])
+const loadingPendingReview = ref(false)
+
+const showCompleteModal = ref(false)
+const completeTarget = ref<Report | null>(null)
+const collectedWeight = ref<number | undefined>()
+const completionNotes = ref('')
+
+const showRejectModal = ref(false)
+const rejectTarget = ref<Report | null>(null)
+const rejectReason = ref('')
 
 onMounted(async () => {
   await Promise.all([
     reportStore.fetchMyReports(),
     notificationStore.fetchNotifications(),
     fetchAvailable(),
+    fetchClaimed(),
+    fetchPendingReview(),
   ])
 })
 
@@ -48,11 +65,90 @@ async function fetchAvailable() {
   }
 }
 
+async function fetchClaimed() {
+  loadingClaimed.value = true
+  try {
+    claimedReports.value = await reportsApi.claimed({ limit: 10 })
+  } catch {
+    // silent
+  } finally {
+    loadingClaimed.value = false
+  }
+}
+
+async function fetchPendingReview() {
+  loadingPendingReview.value = true
+  try {
+    pendingReviewReports.value = await reportsApi.pendingReview({ limit: 10 })
+  } catch {
+    // silent
+  } finally {
+    loadingPendingReview.value = false
+  }
+}
+
 async function claimReport(report: Report) {
   try {
-    const { reportsApi } = await import('../api/reports')
     await reportsApi.claim(report.id)
     availableReports.value = availableReports.value.filter(r => r.id !== report.id)
+  } catch {
+    // silent
+  }
+}
+
+function openComplete(report: Report) {
+  completeTarget.value = report
+  collectedWeight.value = undefined
+  completionNotes.value = ''
+  showCompleteModal.value = true
+}
+
+async function handleComplete() {
+  if (!completeTarget.value) return
+  try {
+    await reportsApi.complete(completeTarget.value.id, {
+      collected_weight: collectedWeight.value,
+      notes: completionNotes.value || undefined,
+    })
+    claimedReports.value = claimedReports.value.filter(r => r.id !== completeTarget.value!.id)
+    showCompleteModal.value = false
+  } catch {
+    // silent
+  }
+}
+
+async function handleUnclaim(report: Report) {
+  if (!confirm('¿Liberar esta tarea? El reporte volverá a estado pendiente.')) return
+  try {
+    await reportsApi.unclaim(report.id)
+    claimedReports.value = claimedReports.value.filter(r => r.id !== report.id)
+    availableReports.value.unshift(report)
+  } catch {
+    // silent
+  }
+}
+
+function openReject(report: Report) {
+  rejectTarget.value = report
+  rejectReason.value = ''
+  showRejectModal.value = true
+}
+
+async function handleVerify(report: Report) {
+  try {
+    await reportsApi.verify(report.id)
+    pendingReviewReports.value = pendingReviewReports.value.filter(r => r.id !== report.id)
+  } catch {
+    // silent
+  }
+}
+
+async function handleReject() {
+  if (!rejectTarget.value) return
+  try {
+    await reportsApi.reject(rejectTarget.value.id, { reason: rejectReason.value || undefined })
+    pendingReviewReports.value = pendingReviewReports.value.filter(r => r.id !== rejectTarget.value!.id)
+    showRejectModal.value = false
   } catch {
     // silent
   }
@@ -179,6 +275,90 @@ function onMarkerClick(marker: MapMarkerData) {
 
         <BaseCard>
           <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Mis tareas activas</h2>
+            <router-link to="/reports?status=in_progress" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              Ver todas
+            </router-link>
+          </div>
+          <div v-if="loadingClaimed" class="py-8">
+            <BaseSpinner size="sm" text="" />
+          </div>
+          <div v-else-if="claimedReports.length === 0" class="text-center py-12 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.38 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+            </svg>
+            <p class="text-lg font-medium text-gray-500">No tienes tareas activas</p>
+            <p class="text-sm text-gray-400 mt-1">Reclama una tarea disponible para comenzar</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="report in claimedReports"
+              :key="report.id"
+              class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div class="min-w-0 flex-1">
+                <router-link :to="`/reports/${report.id}`" class="text-sm font-medium text-gray-900 hover:text-emerald-600 truncate block">
+                  {{ report.title }}
+                </router-link>
+                <p class="text-xs text-gray-500 mt-0.5">{{ report.waste_type_name }} - {{ formatDate(report.created_at) }}</p>
+              </div>
+              <div class="flex gap-2 shrink-0 ml-3">
+                <BaseButton size="sm" variant="primary" @click="openComplete(report)">
+                  Completar
+                </BaseButton>
+                <BaseButton size="sm" variant="secondary" @click="handleUnclaim(report)">
+                  Liberar
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <BaseCard>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Pendientes de revisión</h2>
+            <router-link to="/reports?status=pending_review" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              Ver todas
+            </router-link>
+          </div>
+          <div v-if="loadingPendingReview" class="py-8">
+            <BaseSpinner size="sm" text="" />
+          </div>
+          <div v-else-if="pendingReviewReports.length === 0" class="text-center py-12 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <p class="text-lg font-medium text-gray-500">No hay reportes pendientes de revisión</p>
+            <p class="text-sm text-gray-400 mt-1">Los reportes marcados como limpiados aparecerán aquí</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="report in pendingReviewReports"
+              :key="report.id"
+              class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div class="min-w-0 flex-1">
+                <router-link :to="`/reports/${report.id}`" class="text-sm font-medium text-gray-900 hover:text-emerald-600 truncate block">
+                  {{ report.title }}
+                </router-link>
+                <p class="text-xs text-gray-500 mt-0.5">{{ report.cleaner_name ? `Limpiado por: ${report.cleaner_name}` : '' }} - {{ formatDate(report.cleaned_at || report.created_at) }}</p>
+              </div>
+              <div class="flex gap-2 shrink-0 ml-3">
+                <BaseButton size="sm" variant="primary" @click="handleVerify(report)">
+                  Verificar
+                </BaseButton>
+                <BaseButton size="sm" variant="danger" @click="openReject(report)">
+                  Rechazar
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Notificaciones recientes</h2>
             <router-link to="/notifications" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
               Ver todas
@@ -288,5 +468,47 @@ function onMarkerClick(marker: MapMarkerData) {
         </router-link>
       </div>
     </div>
+
+    <BaseModal v-model="showCompleteModal" title="Completar limpieza">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600">
+          Reporte: <strong>{{ completeTarget?.title }}</strong>
+        </p>
+        <BaseInput
+          v-model.number="collectedWeight"
+          label="Peso recolectado (kg, opcional)"
+          type="number"
+          min="0"
+          step="0.1"
+          placeholder="Ej: 2.5"
+        />
+        <BaseInput
+          v-model="completionNotes"
+          label="Notas (opcional)"
+          placeholder="Observaciones adicionales..."
+        />
+      </div>
+      <template #footer>
+        <BaseButton variant="secondary" @click="showCompleteModal = false">Cancelar</BaseButton>
+        <BaseButton :loading="reportStore.loading" @click="handleComplete">Completar</BaseButton>
+      </template>
+    </BaseModal>
+
+    <BaseModal v-model="showRejectModal" title="Rechazar limpieza">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600">
+          Reporte: <strong>{{ rejectTarget?.title }}</strong>
+        </p>
+        <BaseInput
+          v-model="rejectReason"
+          label="Motivo (opcional)"
+          placeholder="Ej: La limpieza no se completó adecuadamente"
+        />
+      </div>
+      <template #footer>
+        <BaseButton variant="secondary" @click="showRejectModal = false">Cancelar</BaseButton>
+        <BaseButton variant="danger" :loading="reportStore.loading" @click="handleReject">Rechazar</BaseButton>
+      </template>
+    </BaseModal>
   </AppLayout>
 </template>

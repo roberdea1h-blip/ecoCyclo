@@ -12,6 +12,14 @@ export const reportsApi = {
     return api.get<Report[]>(`/reports${qs ? `?${qs}` : ''}`)
   },
 
+  claimed(params?: { skip?: number; limit?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const qs = searchParams.toString()
+    return api.get<Report[]>(`/reports/claimed${qs ? `?${qs}` : ''}`)
+  },
+
   mine(params?: { skip?: number; limit?: number }) {
     const searchParams = new URLSearchParams()
     if (params?.skip !== undefined) searchParams.set('skip', String(params.skip))
@@ -37,6 +45,10 @@ export const reportsApi = {
 
   claim(id: string) {
     return api.post<Report>(`/reports/${id}/claim`)
+  },
+
+  unclaim(id: string) {
+    return api.post<Report>(`/reports/${id}/unclaim`)
   },
 
   complete(id: string, data: { collected_weight?: number; notes?: string }) {

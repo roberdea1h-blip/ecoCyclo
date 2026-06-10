@@ -21,6 +21,8 @@ const router = useRouter()
 const reportStore = useReportStore()
 const authStore = useAuthStore()
 
+const isFetching = ref(true)
+
 const showEditModal = ref(false)
 const editForm = ref({ title: '', description: '', address: '', latitude: 0, longitude: 0, estimated_quantity: null as number | null, status: '' })
 const deleting = ref(false)
@@ -29,6 +31,7 @@ const collectedWeight = ref<number | undefined>()
 const completionNotes = ref('')
 const showRejectModal = ref(false)
 const rejectReason = ref('')
+const showUnclaimModal = ref(false)
 const imageFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
 const uploadingImage = ref(false)
@@ -47,7 +50,9 @@ async function loadReport(id: string) {
     router.push('/reports')
     return
   }
+  isFetching.value = true
   await reportStore.fetchReport(id)
+  isFetching.value = false
 }
 
 onMounted(() => loadReport(route.params.id as string))
@@ -55,14 +60,13 @@ onMounted(() => loadReport(route.params.id as string))
 watch(() => route.params.id, (newId) => {
   if (newId) loadReport(newId as string)
 })
-
-console.log('message');
-const report = reportStore.currentReport
+const report = computed(() => reportStore.currentReport)
 
 const isOwner = () => report.value?.user_id === authStore.user?.id
 const isCleaner = () => report.value?.cleaner_id === authStore.user?.id
 const canClaim = computed(() => report.value?.status === 'pending' && !isOwner())
 const canComplete = computed(() => report.value?.status === 'in_progress' && isCleaner())
+const canUnclaim = computed(() => report.value?.status === 'in_progress' && isCleaner())
 const canVerify = computed(() => report.value?.status === 'pending_review' && isOwner())
 const canReject = computed(() => report.value?.status === 'pending_review' && isOwner())
 
@@ -112,6 +116,20 @@ async function handleComplete() {
       notes: completionNotes.value || undefined,
     })
     showCompleteModal.value = false
+  } catch {
+    // handled by store
+  }
+}
+
+function openUnclaim() {
+  showUnclaimModal.value = true
+}
+
+async function handleUnclaim() {
+  if (!report.value) return
+  try {
+    await reportStore.unclaimReport(report.value.id)
+    showUnclaimModal.value = false
   } catch {
     // handled by store
   }
@@ -207,13 +225,14 @@ async function handleUploadImage() {
 <template>
   <AppLayout>
     <div class="max-w-3xl mx-auto">
-      <BaseSpinner v-if="reportStore.loading && !report" size="md" />
-
-      <div v-else-if="!report" class="text-center py-12">
-        <p class="text-gray-500">Reporte no encontrado</p>
-        <router-link to="/reports" class="text-emerald-600 hover:text-emerald-700 font-medium mt-2 inline-block">
-          Volver a reportes
-        </router-link>
+      <div v-if="!report">
+        <BaseSpinner v-if="isFetching || reportStore.loading" size="md" />
+        <div v-else class="text-center py-12">
+          <p class="text-gray-500">Reporte no encontrado</p>
+          <router-link to="/reports" class="text-emerald-600 hover:text-emerald-700 font-medium mt-2 inline-block">
+            Volver a reportes
+          </router-link>
+        </div>
       </div>
 
       <template v-else>
@@ -342,6 +361,14 @@ async function handleUploadImage() {
                 Marcar como limpiado
               </BaseButton>
               <BaseButton
+                v-if="canUnclaim"
+                variant="secondary"
+                class="w-full"
+                @click="openUnclaim"
+              >
+                Liberar tarea
+              </BaseButton>
+              <BaseButton
                 v-if="canVerify"
                 variant="primary"
                 class="w-full"
@@ -442,6 +469,19 @@ async function handleUploadImage() {
       <template #footer>
         <BaseButton variant="secondary" @click="showRejectModal = false">Cancelar</BaseButton>
         <BaseButton variant="danger" :loading="reportStore.loading" @click="handleReject">Rechazar</BaseButton>
+      </template>
+    </BaseModal>
+
+    <BaseModal v-model="showUnclaimModal" title="Liberar tarea">
+      <div class="space-y-4">
+        <p class="text-gray-700">
+          ¿Estás seguro de liberar esta tarea? El reporte volverá a estado <strong>pendiente</strong>
+          y estará disponible para otros voluntarios.
+        </p>
+      </div>
+      <template #footer>
+        <BaseButton variant="secondary" @click="showUnclaimModal = false">Cancelar</BaseButton>
+        <BaseButton variant="danger" :loading="reportStore.loading" @click="handleUnclaim">Liberar</BaseButton>
       </template>
     </BaseModal>
   </AppLayout>

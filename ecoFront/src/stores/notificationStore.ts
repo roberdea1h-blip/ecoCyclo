@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Notification } from '../types'
 import { notificationsApi } from '../api/notifications'
+import { useApiError } from '../composables/useApiError'
 
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref<Notification[]>([])
@@ -9,13 +10,15 @@ export const useNotificationStore = defineStore('notification', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  const { handleError, clearError } = useApiError()
+
   async function fetchNotifications() {
     loading.value = true
-    error.value = null
+    clearError()
     try {
       notifications.value = await notificationsApi.list()
-    } catch (e: any) {
-      error.value = e.message || 'Error al cargar notificaciones'
+    } catch (e: unknown) {
+      error.value = handleError(e)
     } finally {
       loading.value = false
     }
@@ -36,8 +39,8 @@ export const useNotificationStore = defineStore('notification', () => {
       const notif = notifications.value.find(n => n.id === id)
       if (notif) notif.is_read = true
       if (unreadCount.value > 0) unreadCount.value -= 1
-    } catch (e: any) {
-      error.value = e.message || 'Error al marcar notificación'
+    } catch (e: unknown) {
+      error.value = handleError(e)
     }
   }
 
@@ -46,8 +49,8 @@ export const useNotificationStore = defineStore('notification', () => {
       await notificationsApi.markAllRead()
       notifications.value.forEach(n => (n.is_read = true))
       unreadCount.value = 0
-    } catch (e: any) {
-      error.value = e.message || 'Error al marcar todas'
+    } catch (e: unknown) {
+      error.value = handleError(e)
     }
   }
 
