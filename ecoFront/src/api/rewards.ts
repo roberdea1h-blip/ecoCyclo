@@ -1,5 +1,5 @@
 import { api } from './http'
-import type { Reward } from '../types'
+import type { Redemption, Reward, RedeemRequest } from '../types'
 
 export const rewardsApi = {
   list() {
@@ -10,7 +10,7 @@ export const rewardsApi = {
     return api.get<Reward>(`/rewards/${id}`)
   },
 
-  redeem(id: string) {
-    return api.post<{ id: string }>(`/rewards/${id}/redeem`)
+  redeem(id: string, data?: RedeemRequest) {
+    return api.post<Redemption>(`/rewards/${id}/redeem`, data)
   },
 }

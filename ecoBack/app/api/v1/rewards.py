@@ -7,7 +7,7 @@ from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import IdResponse
-from app.schemas.reward import RewardResponse
+from app.schemas.reward import RedeemRequest, RedemptionResponse, RewardResponse
 from app.services.reward_service import reward_service
 
 router = APIRouter()
@@ -37,11 +37,16 @@ async def get_reward(
     return reward
 
 
-@router.post("/{reward_id}/redeem", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{reward_id}/redeem", response_model=RedemptionResponse, status_code=status.HTTP_201_CREATED)
 async def redeem_reward(
     reward_id: UUID,
+    body: RedeemRequest | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await reward_service.redeem_reward(db, current_user.id, reward_id)
-    return IdResponse(id=reward_id)
+    redemption = await reward_service.redeem_reward(
+        db, current_user.id, reward_id,
+        delivery_type=body.delivery_type if body else None,
+        delivery_info=body.delivery_info if body else None,
+    )
+    return redemption

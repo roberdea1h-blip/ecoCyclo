@@ -62,15 +62,15 @@ class TestRewardsGetIntegration:
 
 
 class TestRewardsRedeemIntegration:
-    async def test_redeem_happy_path(self, client, auth_headers, mock_reward):
+    async def test_redeem_happy_path(self, client, auth_headers, mock_reward, mock_redemption):
         from unittest.mock import AsyncMock, patch
         reward_id = str(mock_reward.id)
 
-        with patch.object(reward_service, "redeem_reward", new=AsyncMock(return_value=True)):
+        with patch.object(reward_service, "redeem_reward", new=AsyncMock(return_value=mock_redemption)):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["id"] == reward_id
+        assert response.json()["points_spent"] == 50
 
     async def test_redeem_out_of_stock(self, client, auth_headers, mock_reward):
         from app.utils.exceptions import RewardOutOfStockException

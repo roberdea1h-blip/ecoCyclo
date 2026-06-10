@@ -21,11 +21,11 @@ export const useRewardStore = defineStore('reward', () => {
     }
   }
 
-  async function redeemReward(id: string) {
+  async function redeemReward(id: string, data?: { delivery_type?: string; delivery_info?: string }) {
     loading.value = true
     error.value = null
     try {
-      const result = await rewardsApi.redeem(id)
+      const result = await rewardsApi.redeem(id, data)
       const reward = rewards.value.find(r => r.id === id)
       if (reward) reward.stock -= 1
       const authStore = useAuthStore()

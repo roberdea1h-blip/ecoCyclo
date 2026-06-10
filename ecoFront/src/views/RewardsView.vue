@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRewardStore } from '../stores/rewardStore'
 import { useAuthStore } from '../stores/authStore'
-import { formatPoints } from '../utils/format'
+import { formatPoints, resolveImageUrl } from '../utils/format'
 import AppLayout from '../components/shared/AppLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseButton from '../components/base/BaseButton.vue'
@@ -21,6 +21,8 @@ const authStore = useAuthStore()
 const selectedReward = ref<Reward | null>(null)
 const showConfirmModal = ref(false)
 const redeemSuccess = ref(false)
+const deliveryType = ref<string>('')
+const deliveryInfo = ref<string>('')
 
 onMounted(async () => {
   await rewardStore.fetchRewards()
@@ -29,15 +31,19 @@ onMounted(async () => {
 function openConfirm(reward: Reward) {
   selectedReward.value = reward
   redeemSuccess.value = false
+  deliveryType.value = ''
+  deliveryInfo.value = ''
   showConfirmModal.value = true
 }
 
 async function confirmRedeem() {
   if (!selectedReward.value) return
   try {
-    await rewardStore.redeemReward(selectedReward.value.id)
+    const data: { delivery_type?: string; delivery_info?: string } = {}
+    if (deliveryType.value) data.delivery_type = deliveryType.value
+    if (deliveryInfo.value) data.delivery_info = deliveryInfo.value
+    await rewardStore.redeemReward(selectedReward.value.id, data)
     redeemSuccess.value = true
-    // Actualizar puntos del usuario
     if (authStore.user) {
       authStore.user.points -= selectedReward.value.points_cost
     }
@@ -76,8 +82,9 @@ async function confirmRedeem() {
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <BaseCard v-for="reward in rewardStore.rewards" :key="reward.id" class="flex flex-col">
           <div class="flex-1 space-y-3">
-            <div class="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center">
-              <IconGift class="w-12 h-12 text-gray-400" />
+            <div class="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+              <img v-if="reward.image_url" :src="resolveImageUrl(reward.image_url)" :alt="reward.name" class="w-full h-full object-cover" />
+              <IconGift v-else class="w-12 h-12 text-gray-400" />
             </div>
             <h3 class="font-semibold text-gray-900">{{ reward.name }}</h3>
             <p class="text-sm text-gray-600">{{ reward.description }}</p>
@@ -119,6 +126,16 @@ async function confirmRedeem() {
           <span class="mx-1">&rarr;</span>
           <span class="font-semibold text-gray-900">{{ formatPoints(authStore.userPoints - (selectedReward?.points_cost || 0)) }}</span>
         </div>
+        <BaseInput
+          v-model="deliveryType"
+          label="Tipo de entrega (opcional)"
+          placeholder="Ej: Retiro en tienda, Envío a domicilio"
+        />
+        <BaseInput
+          v-model="deliveryInfo"
+          label="Información de entrega (opcional)"
+          placeholder="Dirección, instrucciones, etc."
+        />
         <BaseAlert v-if="rewardStore.error" variant="error">
           {{ rewardStore.error }}
         </BaseAlert>

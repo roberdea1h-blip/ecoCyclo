@@ -19,7 +19,7 @@ class PointTransaction(Base):
     __tablename__ = "point_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     points: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[PointTransactionType] = mapped_column(SAEnum(PointTransactionType), nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)

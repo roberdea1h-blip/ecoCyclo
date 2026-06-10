@@ -71,14 +71,14 @@ class TestRewardsGet:
 
 
 class TestRewardsRedeem:
-    async def test_redeem_reward_returns_201(self, client, auth_headers, mock_reward):
+    async def test_redeem_reward_returns_201(self, client, auth_headers, mock_reward, mock_redemption):
         reward_id = str(mock_reward.id)
 
-        with patch.object(reward_service, "redeem_reward", new=AsyncMock(return_value=True)):
+        with patch.object(reward_service, "redeem_reward", new=AsyncMock(return_value=mock_redemption)):
             response = await client.post(f"/api/v1/rewards/{reward_id}/redeem", headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["id"] == reward_id
+        assert response.json()["points_spent"] == 50
 
     async def test_redeem_reward_not_found_returns_404(self, client, auth_headers):
         reward_id = "00000000-0000-0000-0000-000000000000"
