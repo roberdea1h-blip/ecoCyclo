@@ -1,146 +1,69 @@
-from fastapi import HTTPException, status
+"""
+Deprecated — import from module-specific exceptions instead.
+
+Migration guide:
+  from app.users.exceptions import UserNotFoundException, ...
+  from app.report.exceptions import ReportNotFoundException, ...
+  from app.reward.exceptions import RewardNotFoundException, ...
+  from app.redemption.exceptions import RedemptionNotFoundException, ...
+  from app.waste_type.exceptions import WasteTypeNotFoundException, ...
+  from app.point_transaction.exceptions import InsufficientPointsException, ...
+  from app.core.exceptions import ForbiddenException
+"""
+
+import warnings
+
+from app.core.exceptions import ForbiddenException
+from app.point_transaction.exceptions import InsufficientPointsException
+from app.redemption.exceptions import RedemptionNotFoundException, RewardOutOfStockException
+from app.report.exceptions import (
+    CannotClaimOwnReportException,
+    NotAssignedCleanerException,
+    NotOriginalReporterException,
+    ReportNotFoundException,
+    ReportNotInProgressException,
+    ReportNotPendingException,
+    ReportNotPendingReviewException,
+)
+from app.reward.exceptions import RewardNotFoundException
+from app.users.exceptions import (
+    EmailAlreadyExistsException as EmailAlreadyRegistered,
+    InvalidCredentialsException as CredentialsException,
+    UserNotFoundException,
+    VerificationTokenExpiredException as InvalidToken,
+)
+from app.waste_type.exceptions import WasteTypeNotFoundException
+
+__all__ = [
+    "CannotClaimOwnReportException",
+    "CannotDeleteSelfException",
+    "CredentialsException",
+    "EmailAlreadyRegistered",
+    "ForbiddenException",
+    "InsufficientPointsException",
+    "InvalidToken",
+    "NotAssignedCleanerException",
+    "NotOriginalReporterException",
+    "RedemptionNotFoundException",
+    "ReportNotFoundException",
+    "ReportNotInProgressException",
+    "ReportNotPendingException",
+    "ReportNotPendingReviewException",
+    "RewardNotFoundException",
+    "RewardOutOfStockException",
+    "UserNotFoundException",
+    "UsernameAlreadyRegistered",
+    "WasteTypeNotFoundException",
+]
 
 
-class CredentialsException(HTTPException):
+class UsernameAlreadyRegistered(ForbiddenException):
     def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        warnings.warn("UsernameAlreadyRegistered moved to app.users.exceptions", DeprecationWarning, stacklevel=2)
+        super().__init__(message="Username already taken")
 
 
-class InvalidToken(HTTPException):
+class CannotDeleteSelfException(ForbiddenException):
     def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-
-class UserNotFoundException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-
-class ReportNotFoundException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-
-
-class RewardNotFoundException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Reward not found")
-
-
-class EmailAlreadyRegistered(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        )
-
-
-class UsernameAlreadyRegistered(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username already taken",
-        )
-
-
-class ForbiddenException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions",
-        )
-
-
-class RewardOutOfStockException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reward is out of stock",
-        )
-
-
-class InsufficientPointsException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Insufficient points",
-        )
-
-
-class ReportNotPendingException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El reporte no está pendiente",
-        )
-
-
-class CannotClaimOwnReportException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes reclamar tu propio reporte",
-        )
-
-
-class ReportNotInProgressException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El reporte no está en progreso",
-        )
-
-
-class NotAssignedCleanerException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No eres el limpiador asignado a este reporte",
-        )
-
-
-class WasteTypeNotFoundException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tipo de residuo no encontrado",
-        )
-
-
-class CannotDeleteSelfException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes eliminar tu propio usuario",
-        )
-
-
-class ReportNotPendingReviewException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El reporte no está esperando revisión",
-        )
-
-
-class NotOriginalReporterException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el creador del reporte puede realizar esta acción",
-        )
-
-
-class RedemptionNotFoundException(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Canje no encontrado",
-        )
+        warnings.warn("CannotDeleteSelfException moved to app.users.exceptions", DeprecationWarning, stacklevel=2)
+        super().__init__(message="Cannot delete yourself")

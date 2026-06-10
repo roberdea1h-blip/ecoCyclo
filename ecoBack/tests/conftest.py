@@ -23,6 +23,7 @@ from app.models.report import Report
 from app.models.role import Role
 from app.models.reward import Reward
 from app.models.notification import Notification
+from app.models.redemption import Redemption, RedemptionStatus
 
 
 def _make_db_result(scalar_return=None, scalars_list=None):
@@ -139,6 +140,9 @@ def mock_report():
     report.waste_type_name = "Plastic"
     report.user_name = "Test User"
     report.image_url = None
+    report.validated_at = None
+    report.validator_id = None
+    report.validator_name = None
     report.created_at = datetime.now(timezone.utc)
     report.updated_at = datetime.now(timezone.utc)
     return report
@@ -174,6 +178,21 @@ def mock_reward():
     reward.created_at = datetime.now(timezone.utc)
     reward.updated_at = datetime.now(timezone.utc)
     return reward
+
+
+@pytest.fixture
+def mock_redemption():
+    redemption = MagicMock(spec=Redemption)
+    redemption.id = uuid.uuid4()
+    redemption.user_id = uuid.uuid4()
+    redemption.reward_id = uuid.uuid4()
+    redemption.points_spent = 50
+    redemption.status = RedemptionStatus.pending
+    redemption.delivery_type = None
+    redemption.delivery_info = None
+    redemption.redeemed_at = datetime.now(timezone.utc)
+    redemption.created_at = datetime.now(timezone.utc)
+    return redemption
 
 
 @pytest.fixture
