@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { Reward } from '../../types'
+import BaseSelect from '../base/BaseSelect.vue'
 import BaseInput from '../base/BaseInput.vue'
 import BaseButton from '../base/BaseButton.vue'
 import BaseAlert from '../base/BaseAlert.vue'
@@ -21,7 +22,7 @@ const emit = defineEmits<{
   confirm: [{ delivery_type?: string; delivery_info?: string }]
 }>()
 
-const deliveryType = ref('')
+const deliveryType = ref<'digital' | 'physical' | ''>('')
 const deliveryInfo = ref('')
 
 watch(() => props.show, (val) => {
@@ -60,10 +61,14 @@ function handleConfirm() {
         <span class="mx-1">&rarr;</span>
         <span class="font-semibold text-gray-900">{{ userPoints - (reward?.points_cost ?? 0) }}</span>
       </div>
-      <BaseInput
+      <BaseSelect
         v-model="deliveryType"
         label="Tipo de entrega (opcional)"
-        placeholder="Ej: Retiro en tienda, Envío a domicilio"
+        placeholder="Selecciona un tipo"
+        :options="[
+          { value: 'digital', label: 'Digital' },
+          { value: 'physical', label: 'Físico' },
+        ]"
       />
       <BaseInput
         v-model="deliveryInfo"

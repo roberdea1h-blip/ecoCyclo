@@ -158,5 +158,5 @@ defineExpose({ setView, placeSelectedMarker, clearSelectedMarker })
 </script>
 
 <template>
-  <div ref="mapContainer" class="rounded-xl overflow-hidden" :style="{ height }" />
+  <div ref="mapContainer" class="rounded-xl overflow-hidden" :style="{ height, isolation: 'isolate' }" />
 </template>

@@ -42,7 +42,7 @@ function onBackdropClick(e: MouseEvent) {
     >
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
         @click="onBackdropClick"
       >
         <Transition

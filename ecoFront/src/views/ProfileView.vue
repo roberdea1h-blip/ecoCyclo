@@ -14,6 +14,7 @@ import BaseButton from '../components/base/BaseButton.vue'
 import BaseAlert from '../components/base/BaseAlert.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
+import ProfileReportHistory from '../components/profile/ProfileReportHistory.vue'
 import IconStar from '../components/icons/IconStar.vue'
 
 const authStore = useAuthStore()
@@ -132,6 +133,8 @@ function txLabel(type: string): string {
               </div>
             </form>
           </BaseCard>
+
+          <ProfileReportHistory />
 
           <BaseCard>
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Historial de puntos</h2>

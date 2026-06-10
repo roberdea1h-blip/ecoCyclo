@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useReportStore } from '../stores/reportStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { reportsApi } from '../api/reports'
-import { formatDate } from '../utils/format'
 import { useApiError } from '../composables/useApiError'
 import type { Report } from '../types'
 import type { MapMarkerData } from '../components/maps/MapMarker'
 import AppLayout from '../components/shared/AppLayout.vue'
+import BaseAlert from '../components/base/BaseAlert.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 
 import DashboardStatsCards from '../components/dashboard/DashboardStatsCards.vue'
 import DashboardReportList from '../components/dashboard/DashboardReportList.vue'
 import DashboardNotificationsList from '../components/dashboard/DashboardNotificationsList.vue'
-import DashboardMyReports from '../components/dashboard/DashboardMyReports.vue'
+import DashboardActiveReports from '../components/dashboard/DashboardActiveReports.vue'
 import DashboardMapCard from '../components/dashboard/DashboardMapCard.vue'
 import DashboardQuickActions from '../components/dashboard/DashboardQuickActions.vue'
 import ReportCompleteModal from '../components/modals/ReportCompleteModal.vue'
 import ReportRejectModal from '../components/modals/ReportRejectModal.vue'
+import ReportUnclaimModal from '../components/modals/ReportUnclaimModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -32,8 +33,9 @@ const availableReports = ref<Report[]>([])
 const loadingAvailable = ref(false)
 const claimedReports = ref<Report[]>([])
 const loadingClaimed = ref(false)
-const pendingReviewReports = ref<Report[]>([])
-const loadingPendingReview = ref(false)
+const activeClaimedReports = computed(() =>
+  claimedReports.value.filter(r => r.status === 'in_progress')
+)
 
 const showCompleteModal = ref(false)
 const completeTarget = ref<Report | null>(null)
@@ -41,13 +43,15 @@ const completeTarget = ref<Report | null>(null)
 const showRejectModal = ref(false)
 const rejectTarget = ref<Report | null>(null)
 
+const showUnclaimModal = ref(false)
+const unclaimTarget = ref<Report | null>(null)
+
 onMounted(async () => {
   await Promise.all([
     reportStore.fetchMyReports(),
     notificationStore.fetchNotifications(),
     fetchAvailable(),
     fetchClaimed(),
-    fetchPendingReview(),
   ])
 })
 
@@ -73,23 +77,12 @@ async function fetchClaimed() {
   }
 }
 
-async function fetchPendingReview() {
-  loadingPendingReview.value = true
-  try {
-    pendingReviewReports.value = await reportsApi.pendingReview({ limit: 10 })
-  } catch {
-    // silent
-  } finally {
-    loadingPendingReview.value = false
-  }
-}
-
 async function claimReport(report: Report) {
   try {
     await reportsApi.claim(report.id)
     availableReports.value = availableReports.value.filter(r => r.id !== report.id)
-  } catch {
-    // silent
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
   }
 }
 
@@ -104,8 +97,8 @@ async function handleComplete(data: { collected_weight?: number; notes?: string 
     await reportsApi.complete(completeTarget.value.id, data)
     claimedReports.value = claimedReports.value.filter(r => r.id !== completeTarget.value!.id)
     showCompleteModal.value = false
-  } catch {
-    // silent
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
   }
 }
 
@@ -115,8 +108,34 @@ async function handleUnclaim(report: Report) {
     await reportsApi.unclaim(report.id)
     claimedReports.value = claimedReports.value.filter(r => r.id !== report.id)
     availableReports.value.unshift(report)
-  } catch {
-    // silent
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
+  }
+}
+
+// --- Reporter actions (from DashboardActiveReports) ---
+
+function openRevoke(report: Report) {
+  unclaimTarget.value = report
+  showUnclaimModal.value = true
+}
+
+async function handleConfirmRevoke() {
+  if (!unclaimTarget.value) return
+  try {
+    await reportStore.unclaimReport(unclaimTarget.value.id)
+    showUnclaimModal.value = false
+    unclaimTarget.value = null
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
+  }
+}
+
+async function handleVerifyFromActive(report: Report) {
+  try {
+    await reportStore.verifyReport(report.id)
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
   }
 }
 
@@ -125,25 +144,18 @@ function openReject(report: Report) {
   showRejectModal.value = true
 }
 
-async function handleVerify(report: Report) {
+async function handleRejectFromActive(data: { reason?: string }) {
+  if (!rejectTarget.value) return
   try {
-    await reportsApi.verify(report.id)
-    pendingReviewReports.value = pendingReviewReports.value.filter(r => r.id !== report.id)
-  } catch {
-    // silent
+    await reportStore.rejectReport(rejectTarget.value.id, data.reason)
+    showRejectModal.value = false
+    rejectTarget.value = null
+  } catch (e: unknown) {
+    dashboardError.value = handleError(e)
   }
 }
 
-async function handleReject(data: { reason?: string }) {
-  if (!rejectTarget.value) return
-  try {
-    await reportsApi.reject(rejectTarget.value.id, data)
-    pendingReviewReports.value = pendingReviewReports.value.filter(r => r.id !== rejectTarget.value!.id)
-    showRejectModal.value = false
-  } catch {
-    // silent
-  }
-}
+// --- Map ---
 
 const mapMarkers = computed<MapMarkerData[]>(() =>
   reportStore.reports
@@ -175,6 +187,15 @@ function onMarkerClick(marker: MapMarkerData) {
         <p class="text-gray-600 mt-1">Bienvenido, {{ authStore.userName }}</p>
       </div>
 
+      <BaseAlert
+        v-if="dashboardError"
+        variant="error"
+        dismissible
+        @dismiss="dashboardError = null"
+      >
+        {{ dashboardError }}
+      </BaseAlert>
+
       <DashboardStatsCards
         :points="authStore.userPoints"
         :total-reports="reportStore.total"
@@ -200,7 +221,7 @@ function onMarkerClick(marker: MapMarkerData) {
           title="Mis tareas activas"
           view-all-link="/reports?status=in_progress"
           :loading="loadingClaimed"
-          :reports="claimedReports"
+          :reports="activeClaimedReports"
           empty-message="No tienes tareas activas"
           empty-subtext="Reclama una tarea disponible para comenzar"
           empty-icon-type="globe"
@@ -213,37 +234,20 @@ function onMarkerClick(marker: MapMarkerData) {
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardReportList
-          title="Pendientes de revisión"
-          view-all-link="/reports?status=pending_review"
-          :loading="loadingPendingReview"
-          :reports="pendingReviewReports"
-          empty-message="No hay reportes pendientes de revisión"
-          empty-subtext="Los reportes marcados como limpiados aparecerán aquí"
-        >
-          <template #subtitle="{ report }">
-            <p class="text-xs text-gray-500 mt-0.5">
-              {{ report.cleaner_name ? `Limpiado por: ${report.cleaner_name}` : '' }} - {{ formatDate(report.cleaned_at || report.created_at) }}
-            </p>
-          </template>
-          <template #actions="{ report }">
-            <BaseButton size="sm" variant="primary" @click="handleVerify(report)">Verificar</BaseButton>
-            <BaseButton size="sm" variant="danger" @click="openReject(report)">Rechazar</BaseButton>
-          </template>
-        </DashboardReportList>
-
+        <DashboardActiveReports
+          @revoke="openRevoke"
+          @verify="handleVerifyFromActive"
+          @reject="openReject"
+        />
         <DashboardNotificationsList />
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardMyReports />
-        <DashboardMapCard
-          v-if="mapMarkers.length > 0"
-          :center="mapCenter"
-          :markers="mapMarkers"
-          @marker-click="onMarkerClick"
-        />
-      </div>
+      <DashboardMapCard
+        v-if="mapMarkers.length > 0"
+        :center="mapCenter"
+        :markers="mapMarkers"
+        @marker-click="onMarkerClick"
+      />
 
       <DashboardQuickActions />
     </div>
@@ -257,7 +261,13 @@ function onMarkerClick(marker: MapMarkerData) {
     <ReportRejectModal
       v-model:show="showRejectModal"
       :report="rejectTarget"
-      @confirm="handleReject"
+      @confirm="handleRejectFromActive"
+    />
+
+    <ReportUnclaimModal
+      v-model:show="showUnclaimModal"
+      :report="unclaimTarget"
+      @confirm="handleConfirmRevoke"
     />
   </AppLayout>
 </template>
