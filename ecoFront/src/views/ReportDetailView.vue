@@ -236,6 +236,9 @@ async function handleUploadImage() {
       </div>
 
       <template v-else>
+        <BaseAlert v-if="reportStore.error" variant="error" class="mb-4" dismissible @dismiss="reportStore.error = null">
+          {{ reportStore.error }}
+        </BaseAlert>
         <div class="flex items-center justify-between mb-6">
           <div>
             <router-link to="/reports" class="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block">

@@ -52,18 +52,22 @@ async function request<T>(
   let res = await fetch(`${API_BASE}${path}`, opts)
 
   if (res.status === 401) {
-    const refreshed = await refreshAccessToken()
-    if (refreshed) {
-      res = await fetch(`${API_BASE}${path}`, opts)
+    if (path.startsWith('/auth/login') || path.startsWith('/auth/register')) {
+      // not authenticated yet — fall through to error parsing below
     } else {
-      const { useAuthStore } = await import('../stores/authStore')
-      const authStore = useAuthStore()
-      authStore.clearUser()
-      const error: ApiError = {
-        error_code: 'session_expired',
-        message: 'Sesión expirada',
+      const refreshed = await refreshAccessToken()
+      if (refreshed) {
+        res = await fetch(`${API_BASE}${path}`, opts)
+      } else {
+        const { useAuthStore } = await import('../stores/authStore')
+        const authStore = useAuthStore()
+        authStore.clearUser()
+        const error: ApiError = {
+          error_code: 'session_expired',
+          message: 'Sesión expirada',
+        }
+        throw error
       }
-      throw error
     }
   }
 

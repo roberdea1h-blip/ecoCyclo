@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { usePointTransactionStore } from '../stores/pointTransactionStore'
 import { useFormValidation } from '../composables/useFormValidation'
 import { profileSchema } from '../utils/validators'
+import { useApiError } from '../composables/useApiError'
 import { formatPoints, formatDate } from '../utils/format'
 import { api } from '../api/http'
 import AppLayout from '../components/shared/AppLayout.vue'
@@ -18,6 +19,7 @@ import IconStar from '../components/icons/IconStar.vue'
 const authStore = useAuthStore()
 const txStore = usePointTransactionStore()
 const { errors, validate } = useFormValidation(profileSchema)
+const { handleError } = useApiError()
 
 const editing = ref(false)
 const fullName = ref(authStore.user?.full_name || '')
@@ -42,8 +44,8 @@ async function handleSave() {
     }
     saveSuccess.value = true
     editing.value = false
-  } catch (e: any) {
-    saveError.value = e.message || 'Error al guardar'
+  } catch (e: unknown) {
+    saveError.value = handleError(e)
   } finally {
     saveLoading.value = false
   }
