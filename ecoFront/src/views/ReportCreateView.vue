@@ -14,9 +14,6 @@ import BaseButton from '../components/base/BaseButton.vue'
 import BaseAlert from '../components/base/BaseAlert.vue'
 import LocationPicker from '../components/maps/LocationPicker.vue'
 
-// Re-export MapCoordinates type for the LocationPicker
-// Esto es necesario porque el componente espera MapCoordinates
-// pero el type index.ts no lo tiene. Lo definimos localmente.
 interface LocalCoords {
   lat: number
   lng: number
@@ -27,18 +24,17 @@ const reportStore = useReportStore()
 const { errors, validate } = useFormValidation(reportSchema)
 
 const wasteTypes = ref<WasteType[]>([])
-const imageFile = ref<File | null>(null)
-const imagePreview = ref<string | null>(null)
 const location = ref<LocalCoords | null>(null)
 
 const form = reactive({
   title: '',
   description: '',
-  waste_type_id: '' as string | number,
+  waste_type_id: '',
   address: '',
+  estimated_quantity: undefined as number | undefined,
 })
 
-const wasteOptions = ref<{ value: string | number; label: string }[]>([])
+const wasteOptions = ref<{ value: string; label: string }[]>([])
 
 onMounted(async () => {
   try {
@@ -52,19 +48,6 @@ onMounted(async () => {
   }
 })
 
-function onFileChange(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    imageFile.value = target.files[0]
-    imagePreview.value = URL.createObjectURL(target.files[0])
-  }
-}
-
-function clearImage() {
-  imageFile.value = null
-  imagePreview.value = null
-}
-
 async function handleSubmit() {
   if (!validate({ ...form })) return
   if (!location.value) {
@@ -73,16 +56,16 @@ async function handleSubmit() {
   }
 
   try {
-    await reportStore.createReport({
+    const report = await reportStore.createReport({
       title: form.title,
       description: form.description,
       latitude: location.value.lat,
       longitude: location.value.lng,
       address: form.address || undefined,
-      waste_type_id: Number(form.waste_type_id),
-      image: imageFile.value || undefined,
+      waste_type_id: form.waste_type_id,
+      estimated_quantity: form.estimated_quantity,
     })
-    router.push('/reports')
+    router.push(`/reports/${report.id}`)
   } catch {
     // handled by store
   }
@@ -128,6 +111,15 @@ async function handleSubmit() {
           :error="errors.waste_type_id"
         />
 
+        <BaseInput
+          v-model.number="form.estimated_quantity"
+          label="Cantidad estimada (kg, opcional)"
+          type="number"
+          min="0"
+          step="0.1"
+          placeholder="Ej: 5"
+        />
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
             Ubicación <span class="text-red-500">*</span>
@@ -140,27 +132,6 @@ async function handleSubmit() {
           label="Dirección (opcional)"
           placeholder="Calle, número, colonia..."
         />
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Imagen (opcional)
-          </label>
-          <div class="flex items-center gap-4">
-            <label class="cursor-pointer px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-colors">
-              Seleccionar imagen
-              <input type="file" accept="image/*" class="hidden" @change="onFileChange" />
-            </label>
-            <button
-              v-if="imagePreview"
-              type="button"
-              class="text-sm text-red-600 hover:text-red-700"
-              @click="clearImage"
-            >
-              Eliminar
-            </button>
-          </div>
-          <img v-if="imagePreview" :src="imagePreview" alt="Preview" class="mt-2 w-full max-w-sm rounded-lg" />
-        </div>
 
         <div class="flex gap-3">
           <BaseButton type="submit" :loading="reportStore.loading">

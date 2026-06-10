@@ -50,8 +50,7 @@ const statusOptions = [
   { value: '', label: 'Todos los estados' },
   { value: 'pending', label: 'Pendiente' },
   { value: 'in_progress', label: 'En progreso' },
-  { value: 'resolved', label: 'Resuelto' },
-  { value: 'rejected', label: 'Rechazado' },
+  { value: 'cleaned', label: 'Limpiado' },
 ]
 
 const wasteOptions = ref([{ value: '', label: 'Todos los tipos' }])
@@ -181,7 +180,7 @@ function nextPage() {
                   <h3 class="font-semibold text-gray-900 truncate">{{ report.title }}</h3>
                   <BaseBadge
                     size="sm"
-                    :variant="report.status === 'resolved' ? 'success' : report.status === 'pending' ? 'warning' : report.status === 'in_progress' ? 'info' : 'danger'"
+                    :variant="report.status === 'cleaned' ? 'success' : report.status === 'pending' ? 'warning' : 'info'"
                   >
                     {{ getStatusLabel(report.status) }}
                   </BaseBadge>

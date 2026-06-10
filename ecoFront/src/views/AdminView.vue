@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useFormValidation } from '../composables/useFormValidation'
 import { rewardSchema } from '../utils/validators'
 import { getStatusLabel, formatDate, formatPoints } from '../utils/format'
-import type { User, Report, Reward } from '../types'
+import type { User, Report, Reward, WasteType, WasteTypeCreate, WasteTypeUpdate } from '../types'
 import AppLayout from '../components/shared/AppLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
@@ -22,6 +22,7 @@ const rewardStore = useRewardStore()
 
 const users = ref<User[]>([])
 const adminReports = ref<Report[]>([])
+const wasteTypes = ref<WasteType[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -36,7 +37,13 @@ const rewardCreated = ref(false)
 const setupLoading = ref(false)
 const setupResult = ref<string | null>(null)
 
-const activeTab = ref<'users' | 'reports' | 'rewards' | 'setup'>('users')
+// Waste types
+const showWasteTypeModal = ref(false)
+const editingWasteType = ref<WasteType | null>(null)
+const wasteTypeForm = ref<WasteTypeCreate>({ name: '', description: '', icon: '', points_per_report: 10 })
+const savingWasteType = ref(false)
+
+const activeTab = ref<'users' | 'reports' | 'rewards' | 'waste-types' | 'setup'>('users')
 
 onMounted(async () => {
   if (!authStore.isAdmin) return
@@ -47,13 +54,15 @@ async function loadData() {
   loading.value = true
   error.value = null
   try {
-    const [usersData, reportsData] = await Promise.all([
+    const [usersData, reportsData, wasteTypesData] = await Promise.all([
       adminApi.users(),
       adminApi.reports(),
+      adminApi.wasteTypes(),
       rewardStore.fetchRewards(),
     ])
     users.value = usersData
     adminReports.value = reportsData
+    wasteTypes.value = wasteTypesData
   } catch (e: any) {
     error.value = e.message || 'Error al cargar datos'
   } finally {
@@ -82,6 +91,54 @@ async function handleCreateReward() {
   }
 }
 
+// Waste type handlers
+function openCreateWasteType() {
+  editingWasteType.value = null
+  wasteTypeForm.value = { name: '', description: '', icon: '', points_per_report: 10 }
+  showWasteTypeModal.value = true
+}
+
+function openEditWasteType(wt: WasteType) {
+  editingWasteType.value = wt
+  wasteTypeForm.value = {
+    name: wt.name,
+    description: wt.description || '',
+    icon: wt.icon || '',
+    points_per_report: wt.points_per_report,
+  }
+  showWasteTypeModal.value = true
+}
+
+async function handleSaveWasteType() {
+  if (!wasteTypeForm.value.name.trim()) return
+  savingWasteType.value = true
+  try {
+    if (editingWasteType.value) {
+      const updated = await adminApi.updateWasteType(editingWasteType.value.id, wasteTypeForm.value)
+      const idx = wasteTypes.value.findIndex(w => w.id === editingWasteType.value!.id)
+      if (idx !== -1) wasteTypes.value[idx] = updated
+    } else {
+      const created = await adminApi.createWasteType(wasteTypeForm.value)
+      wasteTypes.value.push(created)
+    }
+    showWasteTypeModal.value = false
+  } catch (e: any) {
+    error.value = e.message || 'Error al guardar tipo de residuo'
+  } finally {
+    savingWasteType.value = false
+  }
+}
+
+async function handleDeleteWasteType(id: string) {
+  if (!confirm('¿Eliminar este tipo de residuo?')) return
+  try {
+    await adminApi.deleteWasteType(id)
+    wasteTypes.value = wasteTypes.value.filter(w => w.id !== id)
+  } catch (e: any) {
+    error.value = e.message || 'Error al eliminar tipo de residuo'
+  }
+}
+
 async function handleSetup() {
   if (!confirm('¿Ejecutar setup inicial? Esto puede crear datos iniciales en el sistema.')) return
   setupLoading.value = true
@@ -89,6 +146,7 @@ async function handleSetup() {
   try {
     const result = await adminApi.setup()
     setupResult.value = result.message || 'Setup completado'
+    await loadData()
   } catch (e: any) {
     setupResult.value = e.message || 'Error en setup'
   } finally {
@@ -117,7 +175,7 @@ async function handleSetup() {
 
       <div class="flex gap-2 border-b border-gray-200">
         <button
-          v-for="tab in [{ id: 'users', label: 'Usuarios' }, { id: 'reports', label: 'Reportes' }, { id: 'rewards', label: 'Recompensas' }, { id: 'setup', label: 'Setup' }]"
+          v-for="tab in [{ id: 'users', label: 'Usuarios' }, { id: 'reports', label: 'Reportes' }, { id: 'rewards', label: 'Recompensas' }, { id: 'waste-types', label: 'Residuos' }, { id: 'setup', label: 'Setup' }]"
           :key="tab.id"
           class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
           :class="activeTab === tab.id ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
@@ -148,8 +206,8 @@ async function handleSetup() {
                 <td class="py-3 font-medium text-gray-900">{{ u.full_name }}</td>
                 <td class="py-3 text-gray-600">{{ u.email }}</td>
                 <td class="py-3">
-                  <BaseBadge :variant="u.role === 'admin' ? 'info' : 'default'" size="sm">
-                    {{ u.role }}
+                  <BaseBadge :variant="u.role_name === 'admin' ? 'info' : 'default'" size="sm">
+                    {{ u.role_name }}
                   </BaseBadge>
                 </td>
                 <td class="py-3">{{ formatPoints(u.points) }}</td>
@@ -177,7 +235,7 @@ async function handleSetup() {
             </div>
             <BaseBadge
               size="sm"
-              :variant="r.status === 'resolved' ? 'success' : r.status === 'pending' ? 'warning' : r.status === 'in_progress' ? 'info' : 'danger'"
+              :variant="r.status === 'cleaned' ? 'success' : r.status === 'pending' ? 'warning' : 'info'"
             >
               {{ getStatusLabel(r.status) }}
             </BaseBadge>
@@ -200,6 +258,46 @@ async function handleSetup() {
               <span class="text-gray-500">Stock: {{ r.stock }}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Waste Types Tab -->
+      <div v-if="activeTab === 'waste-types'">
+        <div class="flex justify-end mb-4">
+          <BaseButton @click="openCreateWasteType">Crear tipo de residuo</BaseButton>
+        </div>
+        <BaseSpinner v-if="loading" size="md" />
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200 text-left text-gray-500">
+                <th class="pb-3 font-medium">Nombre</th>
+                <th class="pb-3 font-medium">Descripción</th>
+                <th class="pb-3 font-medium">Icono</th>
+                <th class="pb-3 font-medium">Puntos</th>
+                <th class="pb-3 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="wt in wasteTypes" :key="wt.id" class="border-b border-gray-100">
+                <td class="py-3 font-medium text-gray-900">{{ wt.name }}</td>
+                <td class="py-3 text-gray-600 max-w-xs truncate">{{ wt.description }}</td>
+                <td class="py-3 text-gray-500">{{ wt.icon }}</td>
+                <td class="py-3">{{ wt.points_per_report }}</td>
+                <td class="py-3">
+                  <div class="flex gap-2">
+                    <BaseButton variant="secondary" size="sm" @click="openEditWasteType(wt)">Editar</BaseButton>
+                    <BaseButton variant="danger" size="sm" @click="handleDeleteWasteType(wt.id)">Eliminar</BaseButton>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="wasteTypes.length === 0">
+                <td colspan="5" class="py-8 text-center text-gray-400">
+                  No hay tipos de residuo. Crea uno o ejecuta el Setup.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -252,6 +350,39 @@ async function handleSetup() {
         <div class="flex gap-3">
           <BaseButton type="submit" :loading="creatingReward">Crear</BaseButton>
           <BaseButton type="button" variant="secondary" @click="showCreateReward = false">Cancelar</BaseButton>
+        </div>
+      </form>
+    </BaseModal>
+
+    <BaseModal v-model="showWasteTypeModal" :title="editingWasteType ? 'Editar tipo de residuo' : 'Crear tipo de residuo'">
+      <form @submit.prevent="handleSaveWasteType" class="space-y-4">
+        <BaseInput
+          v-model="wasteTypeForm.name"
+          label="Nombre"
+          placeholder="Ej: Plástico"
+          required
+        />
+        <BaseInput
+          v-model="wasteTypeForm.description"
+          label="Descripción"
+          placeholder="Breve descripción del tipo de residuo"
+        />
+        <BaseInput
+          v-model="wasteTypeForm.icon"
+          label="Icono"
+          placeholder="Identificador del icono"
+        />
+        <BaseInput
+          v-model.number="wasteTypeForm.points_per_report"
+          label="Puntos por reporte"
+          type="number"
+          min="0"
+        />
+        <div class="flex gap-3">
+          <BaseButton type="submit" :loading="savingWasteType">
+            {{ editingWasteType ? 'Guardar' : 'Crear' }}
+          </BaseButton>
+          <BaseButton type="button" variant="secondary" @click="showWasteTypeModal = false">Cancelar</BaseButton>
         </div>
       </form>
     </BaseModal>
