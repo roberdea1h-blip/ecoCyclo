@@ -8,22 +8,24 @@ from app.repositories.base_repository import BaseRepository
 
 class RewardRepository(BaseRepository[Reward]):
     async def get_active(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> list[Reward]:
-        result = await db.execute(
+        stmt = (
             select(Reward)
             .where(Reward.is_active.is_(True))
+            .order_by(Reward.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .order_by(Reward.created_at.desc())
         )
+        result = await db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_with_redemptions(self, db: AsyncSession, id: int) -> Reward | None:
-        result = await db.execute(
+    async def get_with_redemptions(self, db: AsyncSession, reward_id: int) -> Reward | None:
+        stmt = (
             select(Reward)
-            .where(Reward.id == id)
+            .where(Reward.id == reward_id)
             .options(selectinload(Reward.redemptions))
         )
-        return result.scalar_one_or_none()
+        result = await db.execute(stmt)
+        return result.scalars().first()
 
 
 reward_repository = RewardRepository(Reward)
