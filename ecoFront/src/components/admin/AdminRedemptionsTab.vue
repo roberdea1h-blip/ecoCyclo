@@ -71,7 +71,7 @@ async function handleUpdateStatus(id: string, status: string) {
         <thead>
           <tr class="border-b border-gray-200 text-left text-gray-500">
             <th class="pb-3 font-medium">ID</th>
-            <th class="pb-3 font-medium">Usuario</th>
+            <th class="pb-3 font-medium">Usuario ID</th> <!-- Cambio aquí -->
             <th class="pb-3 font-medium">Recompensa</th>
             <th class="pb-3 font-medium">Puntos</th>
             <th class="pb-3 font-medium">Estado</th>
@@ -80,7 +80,11 @@ async function handleUpdateStatus(id: string, status: string) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in redemptions" :key="r.id" class="border-b border-gray-100">
+          <tr 
+            v-for="r in redemptions" 
+            :key="r.id" 
+            class="border-b border-gray-100 hover:bg-gray-50 transition" <!-- Mejora visual -->
+          >
             <td class="py-3 text-gray-500 text-xs">{{ r.id }}</td>
             <td class="py-3 font-medium text-gray-900">{{ r.user_id }}</td>
             <td class="py-3 text-gray-600">{{ r.reward_id }}</td>
