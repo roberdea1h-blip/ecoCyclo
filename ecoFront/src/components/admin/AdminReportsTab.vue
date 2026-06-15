@@ -64,14 +64,18 @@ async function handleDelete(id: string) {
         <thead>
           <tr class="border-b border-gray-200 text-left text-gray-500">
             <th class="pb-3 font-medium">Título</th>
-            <th class="pb-3 font-medium">Usuario</th>
+            <th class="pb-3 font-medium">Usuario Nombre</th> <!-- Cambio aquí -->
             <th class="pb-3 font-medium">Estado</th>
             <th class="pb-3 font-medium">Fecha</th>
             <th class="pb-3 font-medium">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in reports" :key="r.id" class="border-b border-gray-100">
+          <tr 
+            v-for="r in reports" 
+            :key="r.id" 
+            class="border-b border-gray-100 hover:bg-gray-50 transition" <!-- Mejora visual -->
+          >
             <td class="py-3">
               <router-link :to="`/reports/${r.id}`" class="font-medium text-gray-900 hover:text-emerald-600">
                 {{ r.title }}
