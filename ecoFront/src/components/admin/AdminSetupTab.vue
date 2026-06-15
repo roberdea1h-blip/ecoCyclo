@@ -25,10 +25,21 @@ async function handleSetup() {
 
 <template>
   <BaseCard>
-    <h2 class="text-lg font-semibold text-gray-900 mb-2">Setup inicial</h2>
-    <p class="text-sm text-gray-600 mb-4">Ejecuta la configuración inicial del sistema para crear datos por defecto.</p>
-    <BaseButton :loading="setupLoading" @click="handleSetup">Ejecutar setup</BaseButton>
-    <BaseAlert v-if="setupResult" :variant="setupResult.includes('Error') ? 'error' : 'success'" class="mt-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-2">Configuración inicial</h2>
+    
+    <p class="text-sm text-gray-600 mb-4">
+      Ejecuta la configuración inicial del sistema para generar datos base necesarios.
+    </p>
+
+    <BaseButton class="w-fit" :loading="setupLoading" @click="handleSetup">
+      Ejecutar setup
+    </BaseButton>
+
+    <BaseAlert 
+      v-if="setupResult" 
+      :variant="setupResult.includes('Error') ? 'error' : 'success'" 
+      class="mt-4"
+    >
       {{ setupResult }}
     </BaseAlert>
   </BaseCard>
