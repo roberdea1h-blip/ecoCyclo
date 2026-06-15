@@ -48,12 +48,16 @@ async function handleDeleteUser(id: string) {
             <th class="pb-3 font-medium">Email</th>
             <th class="pb-3 font-medium">Rol</th>
             <th class="pb-3 font-medium">Puntos</th>
-            <th class="pb-3 font-medium">Activo</th>
+            <th class="pb-3 font-medium">Estado</th> <!-- Cambio -->
             <th class="pb-3 font-medium">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="u in users" :key="u.id" class="border-b border-gray-100">
+          <tr 
+            v-for="u in users" 
+            :key="u.id" 
+            class="border-b border-gray-100 hover:bg-gray-50 transition"
+          >
             <td class="py-3 text-gray-500">{{ u.id }}</td>
             <td class="py-3 font-medium text-gray-900">{{ u.full_name }}</td>
             <td class="py-3 text-gray-600">{{ u.email }}</td>
@@ -64,9 +68,9 @@ async function handleDeleteUser(id: string) {
             </td>
             <td class="py-3">{{ formatPoints(u.points) }}</td>
             <td class="py-3">
-              <span :class="u.is_active ? 'text-green-600' : 'text-red-600'">
-                {{ u.is_active ? 'Sí' : 'No' }}
-              </span>
+              <BaseBadge :variant="u.is_active ? 'success' : 'danger'" size="sm">
+                {{ u.is_active ? 'Activo' : 'Inactivo' }}
+              </BaseBadge>
             </td>
             <td class="py-3">
               <BaseButton
