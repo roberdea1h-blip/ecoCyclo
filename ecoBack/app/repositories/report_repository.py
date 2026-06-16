@@ -17,6 +17,7 @@ class ReportRepository(BaseRepository[Report]):
             selectinload(Report.cleaner),
             selectinload(Report.validator),
             selectinload(Report.images),
+            selectinload(Report.cleanup_records),
         )
 
     async def get_by_cleaner(self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100) -> list[Report]:

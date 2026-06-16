@@ -51,7 +51,7 @@ class ReportResponse(BaseModel):
 
 
 class CompleteReportRequest(BaseModel):
-    collected_weight: float | None = None
+    collected_weight: float
     notes: str | None = None
 
 

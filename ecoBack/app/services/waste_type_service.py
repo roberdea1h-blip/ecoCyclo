@@ -24,6 +24,7 @@ class WasteTypeService:
             description=data.description,
             icon=data.icon,
             points_per_report=data.points_per_report,
+            points_per_kilo=data.points_per_kilo,
         )
 
     async def update(self, db: AsyncSession, waste_type_id: UUID, data) -> WasteType:

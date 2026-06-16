@@ -34,16 +34,16 @@ async def init_db(db: AsyncSession) -> None:
     db.add(admin_user)
 
     waste_types = [
-        WasteType(id=uuid.uuid4(), name="Plástico", description="Botellas, bolsas, envases y otros plásticos", icon="plastic", points_per_report=10),
-        WasteType(id=uuid.uuid4(), name="Vidrio", description="Botellas, frascos y otros artículos de vidrio", icon="glass", points_per_report=15),
-        WasteType(id=uuid.uuid4(), name="Papel / Cartón", description="Periódicos, cajas, cartón y papel en general", icon="paper", points_per_report=10),
-        WasteType(id=uuid.uuid4(), name="Metal", description="Latas, chatarra y otros metales", icon="metal", points_per_report=20),
-        WasteType(id=uuid.uuid4(), name="Residuos orgánicos", description="Restos de comida, jardinería y materia orgánica", icon="organic", points_per_report=8),
-        WasteType(id=uuid.uuid4(), name="Electrónicos", description="Aparatos electrónicos y eléctricos en desuso", icon="electronic", points_per_report=25),
-        WasteType(id=uuid.uuid4(), name="Residuos peligrosos", description="Pilas, aceites, químicos y materiales peligrosos", icon="hazardous", points_per_report=30),
-        WasteType(id=uuid.uuid4(), name="Residuos de construcción", description="Esm tiles, ladrillos, concreto y materiales de obra", icon="construction", points_per_report=20),
-        WasteType(id=uuid.uuid4(), name="Neumáticos", description="Llantas y neumáticos fuera de uso", icon="tires", points_per_report=25),
-        WasteType(id=uuid.uuid4(), name="Textiles", description="Ropa, telas y productos textiles en desuso", icon="textile", points_per_report=10),
+        WasteType(id=uuid.uuid4(), name="Plástico", description="Botellas, bolsas, envases y otros plásticos", icon="plastic", points_per_report=10, points_per_kilo=2),
+        WasteType(id=uuid.uuid4(), name="Vidrio", description="Botellas, frascos y otros artículos de vidrio", icon="glass", points_per_report=15, points_per_kilo=3),
+        WasteType(id=uuid.uuid4(), name="Papel / Cartón", description="Periódicos, cajas, cartón y papel en general", icon="paper", points_per_report=10, points_per_kilo=1),
+        WasteType(id=uuid.uuid4(), name="Metal", description="Latas, chatarra y otros metales", icon="metal", points_per_report=20, points_per_kilo=5),
+        WasteType(id=uuid.uuid4(), name="Residuos orgánicos", description="Restos de comida, jardinería y materia orgánica", icon="organic", points_per_report=8, points_per_kilo=1),
+        WasteType(id=uuid.uuid4(), name="Electrónicos", description="Aparatos electrónicos y eléctricos en desuso", icon="electronic", points_per_report=25, points_per_kilo=8),
+        WasteType(id=uuid.uuid4(), name="Residuos peligrosos", description="Pilas, aceites, químicos y materiales peligrosos", icon="hazardous", points_per_report=30, points_per_kilo=10),
+        WasteType(id=uuid.uuid4(), name="Residuos de construcción", description="Escombros, ladrillos, concreto y materiales de obra", icon="construction", points_per_report=20, points_per_kilo=2),
+        WasteType(id=uuid.uuid4(), name="Neumáticos", description="Llantas y neumáticos fuera de uso", icon="tires", points_per_report=25, points_per_kilo=6),
+        WasteType(id=uuid.uuid4(), name="Textiles", description="Ropa, telas y productos textiles en desuso", icon="textile", points_per_report=10, points_per_kilo=2),
     ]
     db.add_all(waste_types)
 

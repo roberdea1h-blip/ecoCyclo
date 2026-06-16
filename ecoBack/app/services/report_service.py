@@ -221,7 +221,7 @@ class ReportService:
 
     async def complete_report(
         self, db: AsyncSession, report_id: UUID, user_id: UUID,
-        collected_weight: float | None = None, notes: str | None = None,
+        collected_weight: float, notes: str | None = None,
     ) -> Report:
         report = await report_repository.get_with_images(db, report_id)
         if report is None:
@@ -289,8 +289,10 @@ class ReportService:
         )
 
         points = 0
-        if report.waste_type and report.waste_type.points_per_report:
-            points = report.waste_type.points_per_report
+        if report.waste_type and report.waste_type.points_per_kilo:
+            cleanup = report.cleanup_records[0] if report.cleanup_records else None
+            weight = cleanup.collected_weight if cleanup else 0
+            points = int(weight * report.waste_type.points_per_kilo)
 
         if points > 0 and report.cleaner_id:
             cleaner = await user_repository.get(db, report.cleaner_id)

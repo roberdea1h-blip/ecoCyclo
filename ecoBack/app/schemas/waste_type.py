@@ -9,6 +9,7 @@ class WasteTypeCreate(BaseModel):
     description: str | None = Field(None, max_length=500)
     icon: str | None = Field(None, max_length=50)
     points_per_report: int = 10
+    points_per_kilo: int = 1
 
 
 class WasteTypeUpdate(BaseModel):
@@ -16,6 +17,7 @@ class WasteTypeUpdate(BaseModel):
     description: str | None = None
     icon: str | None = None
     points_per_report: int | None = None
+    points_per_kilo: int | None = None
 
 
 class WasteTypeResponse(BaseModel):
@@ -26,5 +28,6 @@ class WasteTypeResponse(BaseModel):
     description: str | None
     icon: str | None
     points_per_report: int
+    points_per_kilo: int
     created_at: datetime
     updated_at: datetime
