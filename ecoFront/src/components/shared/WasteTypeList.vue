@@ -22,3 +22,37 @@ const reportCounts = computed(() => {
   }
   return counts
 })
+
+const totalReports = computed(() => props.reports?.length ?? 0)
+</script>
+
+<template>
+  <BaseCard :padding="compact ? 'sm' : 'md'">
+    <h2
+      class="font-semibold text-gray-900"
+      :class="compact ? 'text-sm mb-2' : 'text-lg mb-3'"
+    >
+      Tipos de residuo
+    </h2>
+    <div class="space-y-1">
+      <div
+        v-for="wt in wasteTypes"
+        :key="wt.id"
+        class="flex items-center justify-between rounded-lg transition-colors"
+        :class="compact ? 'px-1.5 py-1 text-xs' : 'px-2 py-1.5 text-sm hover:bg-gray-50'"
+      >
+        <div class="flex items-center gap-2 min-w-0">
+          <span v-if="wt.icon" class="shrink-0">{{ wt.icon }}</span>
+          <span class="font-medium text-gray-800 truncate">{{ wt.name }}</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-emerald-600 font-semibold whitespace-nowrap">{{ formatPoints(wt.points_per_report) }} pts</span>
+          <span
+            v-if="reportCounts.size > 0"
+            class="text-gray-400 text-xs tabular-nums"
+          >
+            {{ reportCounts.get(wt.id) || 0 }}
+          </span>
+        </div>
+      </div>
+    </div>
