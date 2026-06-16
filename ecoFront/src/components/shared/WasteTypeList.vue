@@ -56,3 +56,12 @@ const totalReports = computed(() => props.reports?.length ?? 0)
         </div>
       </div>
     </div>
+     <div
+      class="border-t border-gray-100 flex justify-between font-semibold text-gray-800"
+      :class="compact ? 'pt-1.5 mt-1.5 text-xs' : 'pt-2.5 mt-2.5 text-sm'"
+    >
+      <span>Total: {{ formatPoints(totalPoints) }} pts</span>
+      <span v-if="reportCounts.size > 0" class="tabular-nums">{{ totalReports }} reportes</span>
+    </div>
+  </BaseCard>
+</template>
