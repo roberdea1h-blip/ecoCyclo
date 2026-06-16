@@ -5,11 +5,14 @@ import { useReportStore } from '../stores/reportStore'
 import { useAuthStore } from '../stores/authStore'
 import { getStatusLabel, formatDate, resolveImageUrl } from '../utils/format'
 import type { MapMarkerData } from '../components/maps/MapMarker'
+import type { WasteType } from '../types'
+import { wasteTypesApi } from '../api/wasteTypes'
 import AppLayout from '../components/shared/AppLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseBadge from '../components/base/BaseBadge.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseSpinner from '../components/base/BaseSpinner.vue'
+import WasteTypeList from '../components/shared/WasteTypeList.vue'
 import ReportEditModal from '../components/modals/ReportEditModal.vue'
 import ReportCompleteModal from '../components/modals/ReportCompleteModal.vue'
 import ReportRejectModal from '../components/modals/ReportRejectModal.vue'
@@ -21,6 +24,7 @@ const router = useRouter()
 const reportStore = useReportStore()
 const authStore = useAuthStore()
 
+const wasteTypes = ref<WasteType[]>([])
 const isFetching = ref(true)
 
 const deleting = ref(false)
@@ -48,7 +52,14 @@ async function loadReport(id: string) {
   isFetching.value = false
 }
 
-onMounted(() => loadReport(route.params.id as string))
+onMounted(async () => {
+  loadReport(route.params.id as string)
+  try {
+    wasteTypes.value = await wasteTypesApi.list()
+  } catch {
+    // ignore
+  }
+})
 
 watch(() => route.params.id, (newId) => {
   if (newId) loadReport(newId as string)
@@ -274,6 +285,9 @@ async function handleUploadImage() {
                 <div v-if="report.updated_at !== report.created_at">
                   <span class="text-gray-500">Actualizado:</span>
                   <p class="font-medium text-gray-900">{{ formatDate(report.updated_at) }}</p>
+                </div>
+                <div v-if="wasteTypes.length > 0" class="border-t pt-3 mt-3">
+                  <WasteTypeList :waste-types="wasteTypes" compact />
                 </div>
               </div>
             </BaseCard>

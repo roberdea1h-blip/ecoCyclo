@@ -13,6 +13,7 @@ import BaseSpinner from '../components/base/BaseSpinner.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseSelect from '../components/base/BaseSelect.vue'
 import MapView from '../components/maps/MapView.vue'
+import WasteTypeList from '../components/shared/WasteTypeList.vue'
 
 const router = useRouter()
 const reportStore = useReportStore()
@@ -96,8 +97,12 @@ function nextPage() {
 
 <template>
   <AppLayout>
-    <div class="space-y-6">
-      <div class="flex items-center justify-between">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1">
+        <WasteTypeList :waste-types="wasteTypes" :reports="reportStore.reports" />
+      </div>
+      <div class="lg:col-span-2 space-y-6">
+        <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Reportes</h1>
           <p class="text-gray-600 mt-1">Reportes de puntos de acumulación</p>
@@ -210,6 +215,7 @@ function nextPage() {
           </BaseButton>
         </div>
       </template>
+      </div>
     </div>
   </AppLayout>
 </template>

@@ -96,6 +96,7 @@ export interface WasteType {
   description: string | null
   icon: string | null
   points_per_report: number
+  points_per_kilo: number
   created_at: string
   updated_at: string
 }
@@ -105,6 +106,7 @@ export interface WasteTypeCreate {
   description?: string
   icon?: string
   points_per_report?: number
+  points_per_kilo?: number
 }
 
 export interface WasteTypeUpdate {
@@ -112,6 +114,7 @@ export interface WasteTypeUpdate {
   description?: string
   icon?: string
   points_per_report?: number
+  points_per_kilo?: number
 }
 
 export type RedemptionStatus = 'pending' | 'processing' | 'activated' | 'shipped' | 'delivered' | 'cancelled'
