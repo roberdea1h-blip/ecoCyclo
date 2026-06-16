@@ -36,9 +36,6 @@ async function handleConfirm(data: { delivery_type?: string; delivery_info?: str
   try {
     await rewardStore.redeemReward(selectedReward.value.id, data)
     redeemSuccess.value = true
-    if (authStore.user) {
-      authStore.user.points -= selectedReward.value.points_cost
-    }
   } catch {
     // handled by store
   }
