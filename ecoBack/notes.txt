@@ -1,0 +1,8 @@
+1. Levantar los servicios (PostgreSQL, Redis, pgAdmin):
+cd ecoCyclo
+docker-compose up -d
+
+2. Activar el entorno virtual y correr el servidor:
+cd ecoBack
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000

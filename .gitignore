@@ -1,9 +1,6 @@
-AGENTS.md
-
-# Python
 __pycache__/
-*.py[cod]
-.pytest_cache/
-
-ecoBack/**/__pycache__/
 *.pyc
+.env
+venv/
+.venv/
+uploads/
